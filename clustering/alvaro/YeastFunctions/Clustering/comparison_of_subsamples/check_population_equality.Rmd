@@ -1,0 +1,191 @@
+---
+title: "check_population_equality"
+output: html_document
+date: "2024-03-27"
+---
+
+Álvaro Raya Marín.
+27-03-24.
+Sample: Sk1 Sporulated. Shaker 20 Hz. RT. Concentration 1/1000
+Folder: Exp_ClusterSK1_shaker20hz_C1000_RT_20240305_tiff
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning = FALSE, message = FALSE)
+knitr::opts_knit$set(root.dir = "C:\\Users\\uib\\Nextcloud\\LAB\\Wetlab\\alvaro_desktop\\Experimentos\\Experimentos homogeneizacion\\Exp_ClusterSK1_shaker20hz_C1000_RT_20240305_tiff")
+library(tidyverse)
+library(dplyr)
+library(dunn.test)
+library(ggplot2)
+
+
+```
+
+This script is developed in order to check if the four replicas in a well can be considered
+equal or different. To do so, first a SVM radial model has been used to distinguish
+weird shapes due to the image processing. 
+
+Model (caret package):
+svm_radial_model_v2 <- train(rare ~ ., data = train_data, 
+                          method = "svmRadial", trControl = ctrl, 
+                          metric = 'Accuracy',
+                          tuneGrid = expand.grid(C = 1.74, 
+                               sigma = 0.01))
+those are the hyperparameters that has been showns as the best for classification.
+
+|          | Reference |
+|----------|-----------|
+| Prediction |   n   |   y   |
+|--------|------|------|
+|      n   | 279  |  2    |
+|      y   |   2   |   7   |
+
+- Accuracy : 0.9862
+- 95% CI : (0.9651, 0.9962)
+- No Information Rate : 0.969
+- P-Value [Acc > NIR] : 0.05235
+- Kappa : 0.7707
+
+                  
+The model has been saved as a RDS file with name 'classification_cells_not_wanted.rds'. Because of the high P-value, would be a good practice to re-run the model with more training dataset and see if it improves since
+the "y" class (weird shapes), are scarcely found.
+
+Accuracy: percentage of correct predictions made by a model.
+Kappa:  In machine learning, "kappa" typically refers to Cohen's kappa coefficient, which is a statistic that measures inter-rater agreement for categorical items. It is generally used when there are two or more raters (or classifiers) who each classify items into mutually exclusive categories. Cohen's kappa takes into account the possibility of the agreement occurring by chance.
+$$\kappa = \frac{p_o - p_e}{1 - p_e}$$
+
+$p_o$ =  represents the observed agreement among raters.
+
+$p_e$ = represents the expected agreement by chance.
+
+```{r}
+# Work directory
+setwd("C:\\Users\\uib\\Nextcloud\\LAB\\Wetlab\\alvaro_desktop\\Experimentos\\Experimentos homogeneizacion\\Exp_ClusterSK1_shaker20hz_C1000_RT_20240305_tiff")
+path <- "C:\\Users\\uib\\Nextcloud\\LAB\\Wetlab\\alvaro_desktop\\Experimentos\\Experimentos homogeneizacion\\Exp_ClusterSK1_shaker20hz_C1000_RT_20240305_tiff"
+# CSV file list in the folder
+csv_files <- list.files(pattern = "\\.csv$")
+
+# Initialize an empty dataframe
+df_combined <- data.frame()
+
+# Iterate over each CSV file
+for (file in csv_files) {
+  # Build the full file path
+  file_path <- file.path(path, file)
+  
+  # Read the CSV file
+  data <- read.csv(file_path, sep =",")
+  
+  # Check if there are more than 100 rows
+  if (nrow(data) > 1) {
+  
+    # Get the file name
+    file_name <- basename(file)
+    # Extract the well
+    well <- as.factor(sub("^([A-Z]+[0-9]+).*","\\1", file_name))
+    
+    # Extract the third number after the second _
+    replica <- as.factor(sub("^[A-Z]+[0-9]+.([0-9]+)_.*","\\1", file_name))
+    
+    # Extract the second number after the first _
+    time <- as.factor(sub("^[A-Z]+[0-9]+.[0-9]+_[0-9]+_(-?[0-9]+).*", "\\1", file_name))
+    
+    # Create the area_norm column and divide each value by the mean of each csv to obtain normalized areas
+    data$area_norm <- data$Area / mean(quantile(data$Area, 0.25))
+    
+    # Add columns to the data frame
+    data$well <- well
+    data$replica <- replica
+    data$Time <- time
+    data$Concentration <- as.factor(data$Concentration)
+    # Combine the data into the existing dataframe
+    df_combined <- rbind(df_combined, data)
+  }
+}
+
+# Load the pre-trained SVM radial model
+svm_radial_model <- readRDS(paste0('C:\\Users\\uib\\Desktop\\spor_differentiation\\labeled\\', "classification_cells_not_wanted.rds"))
+
+# Normalize and scale all numeric columns of the combined dataframe
+df_combined_scaled <- as.data.frame(scale(df_combined[, sapply(df_combined, is.numeric)]))
+
+# Assign column names
+colnames(df_combined_scaled) <- colnames(df_combined)[sapply(df_combined, is.numeric)]
+
+# Combine non-numeric columns with scaled ones
+df_combined_scaled <- cbind(df_combined[!sapply(df_combined, is.numeric)], df_combined_scaled)
+# Reorder columns of df_combined_scaled according to df_combined order
+df_combined_scaled <- df_combined_scaled[, colnames(df_combined)]
+columns_to_remove <- c(2, 3, 10, 11, 12)
+df_combined_scaled <- df_combined_scaled[,-columns_to_remove]
+# Apply the pre-trained model to the new dataframe
+predictions <- predict(svm_radial_model, newdata = df_combined_scaled)
+
+# Add the predictions list as a column to df_combined
+df_combined$predictions <- predictions
+
+# Remove rows where the 'predictions' column is equal to "y"
+filtered_df <- df_combined[df_combined$predictions != "y", ]
+
+# Remove the 'predictions' column
+df_combined <- filtered_df[, -which(names(filtered_df) == "predictions")]
+df_combined$replica <- as.numeric(df_combined$replica)
+
+
+
+```
+
+```{r}
+# Calculate the results and identify those with adjusted statistical significance
+results <- df_combined %>%
+  filter(replica < 5) %>% 
+  group_by(well) %>%
+  summarise(p_value = kruskal.test(area_norm, replica)$p.value) %>%
+  mutate(significance = ifelse(p_value < 0.05, "Significativo", "No significativo"))
+
+# Filter out significant comparisons
+significant_comparisons <- results %>%
+  filter(significance == "Significativo")
+
+# Initialize a list for storing Dunn test results
+dunn_results <- list()
+
+# Perform Dunn tests for significant comparisons
+for (i in unique(df_combined$well)) {
+  # Filter data for the current well
+  data_well <- df_combined %>%
+    filter(well == i)
+  
+  # Perform Dunn test for the current well
+  dunn_result <- dunn.test::dunn.test(data_well$area_norm, g = data_well$replica, method = "bonferroni")
+  
+  # Add to the list only if the test is significant
+  if (any(dunn_result$P.adjusted < 0.05)) {
+    dunn_results[[as.character(i)]] <- dunn_result
+  }
+}
+
+# Show the final results
+print(results)
+
+```
+
+```{r}
+# Visualize the distribution of areas for each combination of time and well
+plots <- df_combined %>%
+  filter(replica < 5, well %in% results$well[results$significance == 'Significativo']) %>% 
+  ggplot(aes(x = area_norm, fill = as.factor(replica))) +  
+  geom_histogram(binwidth = (max(df_combined$area_norm) - min(df_combined$area_norm)) / 50, 
+                 alpha = 0.5, 
+                 position = "identity") + 
+  facet_wrap(~well) + 
+  labs(x = "Replica", y = "Area") +
+  ggtitle("Distribution of areas per replica for each time and well")  
+
+# Show the plots
+print(plots)
+
+
+```
+
+
+Significative differences observed between subsamples are probably explained by the fact of the scarce amount of clusters. There are many few of themrandomly distributed, when it appears just in a subsample inside a well, the area distribution changes significantly from the other subsamples. Probably it's better to not take into account this factor and treat all four subsamples as one.

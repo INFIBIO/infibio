@@ -1,0 +1,204 @@
+---
+title: "predict weird shape model"
+author: "Álvaro Raya Marín"
+output: 
+  pdf_document:
+    toc: true
+date: "`r format(Sys.Date(), '%e de %B, %Y')`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r paquetes, echo=FALSE}
+library(readr)
+library(caret)
+library(dplyr)
+library(kernlab)
+```
+
+Esta línea es para ver si se ha configurado correctamente github
+## Partición test y train.
+
+Emplearemos la función para codificar los datos y los separaremos en datos de entrenamiento y de test.
+
+
+```{r División de los datos}
+yeast <- read_csv("C:\\Users\\uib\\Desktop\\spor_differentiation\\labeled\\df_combinado.csv", 
+    col_names = TRUE, show_col_types = FALSE)
+
+yeast$rare <- as.factor(yeast$rare)
+# Supongamos que tu dataframe se llama df
+# Puedes ajustar el nombre del dataframe según tu caso
+
+# Columnas que quieres eliminar
+columns_to_remove <- c(2, 3, 10, 11, 12)
+
+yeast_new <- yeast[, -columns_to_remove]
+scaled_centered_yeast_new <- as.data.frame(scale(yeast_new[ncol(yeast)]))
+scaled_normalized_data<-cbind(scaled_centered_yeast_new, yeast["rare"])
+```
+
+
+
+```{r}
+
+# Ahora df_new no contiene las columnas 2, 3, 10, 11 y 12
+
+# Establecer la semilla aleatoria para reproducibilidad
+set.seed(12345)
+
+
+# Crear índices para la división de datos (67% train, 33% test)
+train_index <- createDataPartition(scaled_normalized_data$rare, p = 0.67, list = FALSE)
+train_data <- scaled_normalized_data[train_index, ]
+test_data <- scaled_normalized_data[-train_index, ]
+
+
+```
+
+## Desarrollo de los modelos con la librería kernlab
+
+A continuación desarrollaremos dos modelos, uno lineal y otro radial con la librería.
+
+```{r kernel}
+set.seed(12345)
+# Generar los modelos predictivos.
+m_lineal <- ksvm(rare ~. , data = train_data, kernel = "vanilladot")
+m_rbf <- ksvm(rare ~. , data = train_data, kernel = "rbfdot")
+
+#Generar las predicciones
+lineal_pred <- predict(m_lineal, test_data)
+rbf_pred <- predict(m_rbf, test_data)
+
+# Generar matrices de confusión
+confusion_lineal <- confusionMatrix(lineal_pred, test_data$rare)
+confusion_rbf <- confusionMatrix(rbf_pred, test_data$rare)
+
+confusion_rbf
+
+```
+
+## *3-fold Cross-validation*
+El siguiente modelo que generaremos será empleando el paquete 'caret' para poder implementar un remuestreo en el modelo con el kernel lineal y mejorarlo
+
+
+```{r crossvalidation}
+set.seed(12345)
+# Crear el control
+ctrl <- trainControl(method = "cv", number = 3)
+# Ajsutar el modelo
+svm1 <- train(rare ~., data = train_data, method = "svmLinear", trControl = ctrl)
+
+
+```
+
+## Hiperparámetros C y sigma.
+
+Por último, generaremos un modelo radial con el paquete 'caret' donde implementaremos intervalos de los hiperparámetros C y sigma y veremos qué valores nos proporcionan un mejor modelo.
+
+
+```{r}
+set.seed(12345)
+# Definir los hiperparámetros
+hyperparameters <- expand.grid(C = seq(1.6, 1.8, by = 0.01), 
+                               sigma = seq(0.0005, 0.2, by = 0.001))
+# Realizar el modelo
+svm_radial_model <- train(rare ~ ., data = train_data, 
+                          method = "svmRadial", trControl = ctrl, 
+                          metric = 'Accuracy',
+                          tuneGrid = hyperparameters)
+svm_radial_model_v2 <- train(rare ~ ., data = train_data, 
+                          method = "svmRadial", trControl = ctrl, 
+                          metric = 'Accuracy',
+                          tuneGrid = expand.grid(C = 1.74, 
+                               sigma = 0.01))
+saveRDS(svm_radial_model_v2, paste0('C:\\Users\\uib\\Desktop\\spor_differentiation\\labeled\\', "classification_cells_not_wanted.rds"))
+  
+# Predecir con el modelo entrenado en los datos de prueba
+predictions <- predict(svm_radial_model_v2, newdata = test_data)
+
+# Obtener la matriz de confusión
+confusion_matrix <- confusionMatrix(predictions, test_data$rare)
+plot(svm_radial_model)
+resultados_svm <- svm_radial_model$results
+confusion_matrix
+```
+
+
+Los valores de sigma para los que la precisión es mayor que `r min(resultados_svm$Accuracy)` son `r unique(resultados_svm$sigma[resultados_svm$Accuracy > min(resultados_svm$Accuracy)])`, y los 5 valores de coste (C) que han obtenido una precisión más alta han sido `r head(resultados_svm[order(-resultados_svm$Accuracy), ]$C, 5)`. Con lo que valores de coste medios-altos para el rango que hemos analizado y valores de sigma muy bajos encontraríamos los mejores modelos.
+
+## Discusión.
+
+```{r tabla resumen}
+accuracy <- c(round(confusion_lineal$overall["Accuracy"],5), 
+              round(confusion_rbf$overall["Accuracy"], 5),
+              round(svm1$results["Accuracy"], 5),
+              round(max(resultados_svm$Accuracy), 5))
+kappa <- c(round(confusion_lineal$overall["Kappa"],5), 
+           round(confusion_rbf$overall["Kappa"],5), 
+           round(svm1$results["Kappa"],5),
+           round(max(resultados_svm$Kappa),5))
+nombres <- c("Modelo Lineal","Modelo Radial",
+             "Modelo Lineal con CV = 3", 
+             sprintf("Modelo Radial (C = %.2f, sigma = %.3f)", 
+                     head(resultados_svm
+                     [order(-resultados_svm$Accuracy), ]$C, 1),
+                     head(resultados_svm
+                     [order(-resultados_svm$Accuracy), ]$sigma, 1)))
+tabla  <- rbind(accuracy, kappa)
+colnames(tabla) <- nombres
+knitr::kable(tabla)
+```
+
+
+Para aplicar el mejor modelo obtenido en función de los parámetros Accuracy y Kappa en todos los archivos de la carpeta que estamos analizamos, aplicamos el siguiente bucle:
+
+``{r}
+library(kernlab)
+
+# Set the path to your CSV files
+path <- 'C:/Users/uib/Desktop/Experimentos homogeneizacion/Exp_Hom_2/Tiff'
+
+# List all CSV files in the specified path
+csv_files <- list.files(path, pattern = "\\.csv$", full.names = TRUE)
+
+# Load the pre-trained model
+model <- ksvm(rare ~ ., data = train_data, kernel = "vanilladot")
+
+# Loop through each CSV file
+for (file in csv_files) {
+  # Read the CSV file
+  df <- read.csv(file)
+
+  # Check if the DataFrame is not empty
+  if (nrow(df) > 0) {
+    # Assuming your model expects the same input features used during training
+    input_columns <- c('Area', 'Circularity', 'Eccentricity')
+
+    # Select relevant columns and scale them (assuming you used the same scaling during training)
+    X <- scale(df[, input_columns])
+
+    # Make predictions
+    predictions <- predict(model, newdata = X)
+
+    # Add a new column with the predicted values to the DataFrame
+    df$Aggregation_Predicted <- predictions
+
+    # Extract the file name without extension
+    file_name_without_extension <- tools::file_path_sans_ext(basename(file))
+
+    # Save the modified DataFrame to a new CSV file with the _predicted suffix
+    new_file_path <- file.path(path, paste0(file_name_without_extension, '_predicted.csv'))
+    write.csv(df, new_file_path, row.names = FALSE)
+    cat(paste("File saved:", new_file_path, "\n"))
+  } else {
+    cat(paste("Skipped empty file:", file, "\n"))
+  }
+}
+
+```
+
+
+# 3. Bibliografía
