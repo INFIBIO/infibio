@@ -1,6 +1,6 @@
 function plots(df, bins, path_save)
     % bins = 100;
-    % df = csv_combined;
+    % df = mat_combined;
     if ~exist('bins', 'var')
         bins = 100;
     end
@@ -9,110 +9,143 @@ function plots(df, bins, path_save)
         path_save = '';
     end
     
-    % Define el criterio para los valores atípicos (por ejemplo, valores fuera de 1.5 * IQR)
-    MyMatrix = sort(vertcat(df.areaNorm));
-    % lower_bound = quantile(MyMatrix, 0.25) - iqr(MyMatrix);
-    % upper_bound = quantile(MyMatrix, 0.75) + 5 * iqr(MyMatrix);
-    % % Filtra los valores atípicos
-    % df_filtered = df(df(:).areaNorm > lower_bound & df(:).areaNorm < upper_bound, :);
-    
-    % Ordena el factor de Time para estar en orden numérico
-    % df.Time = categorical(df.Time);
     mask = ~isnan([df.Time]);
-    datos_limpios = df(mask);
-    % Obtener los tiempos únicos
-    tiempos_unicos = unique(vertcat(datos_limpios.Time));
-    % Definir el nombre de la subcarpeta
-    subcarpeta = 'graficos';
+    clean_data = df(mask);
+    % Get unique times
+    unique_times = unique(vertcat(clean_data.Time));
+    % Define the name of the subfolder
+    subfolder = 'plots';
     
-    % Comprobar si la subcarpeta existe, si no, crearla
-    if ~exist(fullfile(path_save, subcarpeta), 'dir')
-        mkdir(fullfile(path_save, subcarpeta));
+    % Check if the subfolder exists, if not, create it
+    if ~exist(fullfile(path_save, subfolder), 'dir')
+        mkdir(fullfile(path_save, subfolder));
     end
     
-    % Iterar sobre cada Time y crear un histograma para el área correspondiente
-    for i = 1:length(tiempos_unicos)
-        mask = [df.Time] == tiempos_unicos(i);
+    % Iterate over each Time and create a histogram for the corresponding area
+    for i = 1:length(unique_times)
+        mask = [df.Time] == unique_times(i);
         
-        % Filtrar los df para el Time actual
-        datos_tiempo_actual = df(mask);
+        % Filter df for the current Time
+        current_time_data = df(mask);
         figure;
         hold on;
-        matrix = vertcat(datos_tiempo_actual.areaNorm);
-        % Crear el histograma para el área
+        matrix = vertcat(current_time_data.NormalizedArea);
+        % Create histogram for the area
         h = histogram(matrix);
         
-        % Añadir etiquetas y título
-        xlabel('Área');
-        ylabel('Frecuencia');
-        title(['Distribución del Área para Time ', num2str(tiempos_unicos(i))]);
-        % Guardar el gráfico en la subcarpeta
-        nombre_archivo = sprintf('hist_plot%d.png', tiempos_unicos(i));
-        ruta_archivo = fullfile(path_save, subcarpeta, nombre_archivo);
-        saveas(gcf, ruta_archivo);
+        % Add labels and title
+        xlabel('Area');
+        ylabel('Frequency');
+        title(['Area Distribution for Time ', num2str(unique_times(i))]);
+        % Save the plot in the subfolder
+        file_name = sprintf('histogram_plot%d.png', unique_times(i));
+        file_path = fullfile(path_save, subfolder, file_name);
+        saveas(gcf, file_path);
         
-        % Cerrar la figura actual para evitar acumulación
+        % Close the current figure to prevent accumulation
         close(gcf);
     end
     
     % Filter out extreme values
-    mask = [df.areaNorm] > 2;
+    mask = [df.NormalizedArea] > 2;
     df_extreme = df(mask);
     
-    
-    for i = 1:length(tiempos_unicos)
-        mask = [df_extreme.Time] == tiempos_unicos(i);
+    for i = 1:length(unique_times)
+        mask = [df_extreme.Time] == unique_times(i);
         
-        % Filtrar los df para el Time actual
-        datos_tiempo_actual = df_extreme(mask);
+        % Filter df for the current Time
+        current_time_data = df_extreme(mask);
         figure;
         hold on;
-        matrix = vertcat(datos_tiempo_actual.areaNorm);
-        % Crear el histograma para el área
+        matrix = vertcat(current_time_data.NormalizedArea);
+        % Create histogram for the area
         h = histogram(matrix);
         
-        % Añadir etiquetas y título
-        xlabel('Área');
-        ylabel('Frecuencia');
-        title(['Distribución del Área para Time ', num2str(tiempos_unicos(i))]);
-         % Guardar el gráfico en la subcarpeta
-        nombre_archivo = sprintf('extreme_plot%d.png', tiempos_unicos(i));
-        ruta_archivo = fullfile(path_save, subcarpeta, nombre_archivo);
-        saveas(gcf, ruta_archivo);
+        % Add labels and title
+        xlabel('Area');
+        ylabel('Frequency');
+        title(['Area Distribution for Time ', num2str(unique_times(i))]);
+        % Save the plot in the subfolder
+        file_name = sprintf('extreme_plot%d.png', unique_times(i));
+        file_path = fullfile(path_save, subfolder, file_name);
+        saveas(gcf, file_path);
         
-        % Cerrar la figura actual para evitar acumulación
+        % Close the current figure to prevent accumulation
         close(gcf);
     end
     
-    
+    % Create violin plot
     figure;
-    distributionPlot(vertcat(datos_limpios.areaNorm), 'group', [datos_limpios.Time], 'histOpt', 2);
+    distributionPlot(vertcat(clean_data.NormalizedArea), 'group', [clean_data.Time], 'histOpt', 2);
     title('Distribution of Areas per Time Violin Plot');
     xlabel('Time');
     ylabel('Area');
-    nombre_archivo ='violin_plot.png';
-    ruta_archivo = fullfile(path_save, subcarpeta, nombre_archivo);
-    saveas(gcf, ruta_archivo);
+    file_name ='violin_plot.png';
+    file_path = fullfile(path_save, subfolder, file_name);
+    saveas(gcf, file_path);
     
-    % Cerrar la figura actual para evitar acumulación
+    % Close the current figure to prevent accumulation
     close(gcf);
 
+    probability = struct(); % Initialize empty structure
 
-    for i = 1:length(tiempos_unicos)
-        mask = [df.Time] == tiempos_unicos(i);
-        % Filtrar los df para el Time actual
-        datos_tiempo_actual = df(mask);
-        probability = ([]);
-        areas_unicas = unique(vertcat(datos_tiempo_actual.areaNorm));
-        area_total = sum(datos_tiempo_actual.areaNorm)
-            for j = lentgh(areas_unicas)
-                mask = [data_tiempo_actual.areaNorm] == areas_unicas(j);
-                suma = sum(datos_tiempo_actual.areaNorm(mask));
-                probability(j).probabilidad = suma/area_total;
-                probability(j).area = areas_unicas(j)
-            end
-        
+    for i = 1:length(unique_times)
+        mask = [df.Time] == unique_times(i);
+        % Filter df for the current Time
+        current_time_data = df(mask);
 
+        unique_areas = unique(vertcat(current_time_data.NormalizedArea));
+        total_area = sum(vertcat(current_time_data.NormalizedArea));
 
+        for j = 1:length(unique_areas)
+            probability(end+1).time = unique_times(i);
+            mask = [current_time_data.NormalizedArea] == unique_areas(j);
+            filtered_data = current_time_data(mask);
+            sum_area = sum(vertcat(filtered_data.NormalizedArea));
+            
+            probability(end).probability = sum_area / total_area;
+            probability(end).area = unique_areas(j);
+            probability(end).positive_sd = sqrt((sum_area / total_area)*(1-sum_area / total_area)/sum_area);
+         
+        end
+    end
+    probability(:,1) = [];
+    figure;
+    hold on;
+    legend_entries = {};  % Initialize legend entries
+    % Iterate over each unique time
+    for i = 1:length(unique_times)
+        % Filter the DataFrame for the current time
+        mask = [probability.time] == unique_times(i);
+        % Filter df for the current Time
+        current_time_data = probability(mask);
+    
+        % Plot the probability of each ID for the current time
+        plot(vertcat(current_time_data.area), vertcat(current_time_data.probability), 'o-');
+         % Calculate the positive and negative parts of the standard deviation
+        positive_sd = current_time_data.sd;
+        negative_sd = -current_time_data.sd;
+    
+        % Plot the probability of each ID for the current time with error bars
+        errorbar(vertcat(current_time_data.area), vertcat(current_time_data.probability), negative_sd, positive_sd, 'o-');
+            % Store legend entry for current time
+        legend_entries{end+1} = ['Time ' num2str(unique_times(i))];
+    
+        % Add labels and title
+        xlabel('Number of Cells');
+        ylabel('Probability');
+        title('Probability of Each Number of Cells for Time');
+    
+    end
+    
+    % Show the legend with entries for each time
+    legend(legend_entries);
+    
+    % Save the plot to a file
+    file_name = 'plot_time.png';
+    saveas(gcf, file_name);
+    
+    hold off;  % Release hold on the figure
 
 end
+
