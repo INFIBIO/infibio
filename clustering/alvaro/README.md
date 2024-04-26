@@ -25,15 +25,15 @@ First two steps are exactly as previously:
 2 - Check binarization: since in the process of taking the pictures some artefact might appear, is recommended to check the binarized images to be sure
     there are not artifacts that can give wrong results.
 
-3 - Data analyses: The cluster_analysis.m file integrates four functions:
+3 - Data analyses: The [cluster_analysis.m](https://github.com/INFIBIO/infibio/blob/main/clustering/alvaro/cluster_analysis.m) file integrates four functions:
 
-a - comineMatFiles: combine the .mat files obtained from the binarization.
+a - [comineMatFiles](https://github.com/INFIBIO/infibio/blob/main/clustering/alvaro/combineMatFiles.m): combine the .mat files obtained from the binarization.
 
-b - clean_weird_shapes: applies an SVM model to remove those weird shapes obtained in the binarization. It presents > 99% of accuracy.
+b - [clean_weird_shapes](https://github.com/INFIBIO/infibio/blob/main/clustering/alvaro/clean_weird_shapes.m): applies an SVM model to remove those weird shapes obtained in the binarization. It presents > 99% of accuracy.
 
-c - plots: a function that creates different plots to analyse the data. For more details, check the function.
+c - [plots](https://github.com/INFIBIO/infibio/blob/main/clustering/alvaro/plots.m): a function that creates different plots to analyse the data. For more details, check the function.
 
-d - test: checks the normality and homocedasticity of the Normalized Area and applies a Kruskal test and Tukey post-hoc test.
+d - [test](https://github.com/INFIBIO/infibio/blob/main/clustering/alvaro/tests.m): checks the normality and homocedasticity of the Normalized Area and applies a Kruskal test and Tukey post-hoc test.
 
 
 
