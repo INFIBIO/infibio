@@ -11,6 +11,34 @@ We can find different files and folders. Each folder will have their own README.
 
 ## Workflows:
 
+### Matlab:
+
+This workflow is developed to substitute the previous one developed in R to have everything related to yeast analyses in the same language.
+
+First two steps are exactly as previously:
+
+1 -  Binarization and extract features: first of all is needed to binarize the TIF images. To do so, you'll have to use the
+     [script_image_analysis_V1.m](https://github.com/INFIBIO/infibio/blob/main/clustering/alvaro/script_image_analysis_AR_V1.m) script. In this script you can change the function to use, in this case you have to use the [image_analysis_aggregates_AR_V1](https://github.com/INFIBIO/infibio/blob/main/clustering/alvaro/image_analysis_aggregates_AR_V1.m)
+     function in the YeastFunctions/Clustering folder. As input expects a folder with tif images and output are csv and m files with features (for more info, 
+     go inside the script)
+
+2 - Check binarization: since in the process of taking the pictures some artefact might appear, is recommended to check the binarized images to be sure
+    there are not artifacts that can give wrong results.
+
+3 - Data analyses: The cluster_analysis.m file integrates four functions:
+
+a - comineMatFiles: combine the .mat files obtained from the binarization.
+
+b - clean_weird_shapes: applies an SVM model to remove those weird shapes obtained in the binarization. It presents > 99% of accuracy.
+
+c - plots: a function that creates different plots to analyse the data. For more details, check the function.
+
+d - test: checks the normality and homocedasticity of the Normalized Area and applies a Kruskal test and Tukey post-hoc test.
+
+
+
+### R:
+
 This workflow is developed to analyse the yeast clustering experiments run in the laboratory. This analyse has three steps:
 
 1 -  Binarization and extract features: first of all is needed to binarize the TIF images. To do so, you'll have to use the
