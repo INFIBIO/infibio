@@ -38,11 +38,10 @@ tukey_tbl = array2table(c, 'VariableNames', {'Group1', 'Group2', 'LowerCI','Diff
 % tukey_tbl.Group2 = groups(tukey_tbl.Group2);
 tukey_numbers = unique(vertcat(tukey_tbl.Group1));
 [~, idx] = ismember(vertcat(tukey_tbl.Group1), tukey_numbers);
-tukey_tbl.Group1 = cell2table(nms(idx));
+tukey_tbl.Group1 = numerical(nms(idx));
 tukey_numbers = unique(vertcat(tukey_tbl.Group2));
 [~, idx] = ismember(vertcat(tukey_tbl.Group2), tukey_numbers);
-nms = nms(2:end, :);
-tukey_tbl.Group2 = cell2table(nms(idx));
+tukey_tbl.Group2 = cell2(nms(idx));
 disp(tukey_tbl)
 
 % Save Tukey post hoc result to a CSV file
