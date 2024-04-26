@@ -23,21 +23,20 @@ path = ['C:\Users\uib\Nextcloud\LAB\Wetlab\Yeast_experiments\Clustering ' ...
 
 % The combineMatFiles is the function that will combine all .mat files with 
 % the results. 
-mat_combined = combineMatFiles(path)
+mat_combined = combineMatFiles(path);
 
-% Clean up weird cell shapes. Herue it's supposed to be used the model to
-% clean the weird shapes generated in R, but it didn't seem to work on
-% matlab. It would be interesting to look for a way to use the model here
-% or develop it in matlab.
-% csv_cleaned = clean_weird_shapes(csv_combined, model_path)
+% Clean up weird cell shapes. An SVM model with > 99% of accuracy
+% distinguish between weird shapes produced in the binarization and good
+% shaped cells to delete those rows.
+mat_cleaned = clean_weird_shapes(mat_combined);
 
 % Plots function will generate the plots specified in the function. 
 % INPUT: mat_combined file, number of bins and the path to save the plots.
-plots(mat_combined, 100, path)
+plots(mat_combined, 100, path);
 
 % Tests function will apply the test specified in the function. 
 % INPUT: mat_combined file and path to store the results.
-tests(mat_combined, path)
+tests(mat_combined, path);
 
 
 

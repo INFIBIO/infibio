@@ -40,7 +40,15 @@ function combinedData = combineMatFiles(folderPath)
             for k = 1:length(propsbw_cleaned)
                 propsbw_cleaned(k).Well = well;
                 propsbw_cleaned(k).Replica = replicate;
-                propsbw_cleaned(k).NormalizedArea = normalizedArea(k);
+                % Change values in NormalizedArea
+                if normalizedArea(k) > 6
+                    % Since it's difficult to distinguish the number of
+                    % cells in big clusters, all clusters above 6 will be
+                    % considered as >6 (this will be evident in the plots?
+                    propsbw_cleaned(k).NormalizedArea = 7;
+                else
+                    propsbw_cleaned(k).NormalizedArea = normalizedArea(k);
+                end
             end
             % Combine the data into the combined data structure
             for l = 1:length(propsbw_cleaned)

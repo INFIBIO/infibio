@@ -1,5 +1,5 @@
-function df_combined = clean_weird_shapes(df)
-    %df = mat_combined;
+%function df_combined = clean_weird_shapes(df)
+    df = mat_combined;
     % Load the pre-trained radial SVM model from the same folder as the function
     model_path = fullfile(fileparts(mfilename('fullpath')), 'svm_radial_model.mat');
     svm_radial_model = load(model_path);
@@ -30,11 +30,11 @@ function df_combined = clean_weird_shapes(df)
     mask = [df.predictions] == "n";
     filtered_df = df(mask);
     df = struct2table(df);
-    filtered_df = struct2table(filtered_df);
+    d
     % Remove the 'predictions' column
     df_combined = filtered_df(:, ~strcmp(df.Properties.VariableNames, 'predictions'));
     
-    df_combined = table2struct(df_combined);
-    
-end
+    % Convert the 'replica' column to numeric type
+    df_combined.Replica = str2double(df_combined.Replica);
+%end
 

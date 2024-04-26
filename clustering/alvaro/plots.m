@@ -1,6 +1,4 @@
 function plots(df, bins, path_save)
-    % bins = 100;
-    % df = mat_combined;
     if ~exist('bins', 'var')
         bins = 100;
     end
@@ -11,38 +9,39 @@ function plots(df, bins, path_save)
     
     mask = ~isnan([df.Time]);
     clean_data = df(mask);
-    % Get unique times
     unique_times = unique(vertcat(clean_data.Time));
-    % Define the name of the subfolder
     subfolder = 'plots';
     
-    % Check if the subfolder exists, if not, create it
     if ~exist(fullfile(path_save, subfolder), 'dir')
         mkdir(fullfile(path_save, subfolder));
     end
     
-    % Iterate over each Time and create a histogram for the corresponding area
+    % Histogram plots for area distribution
     for i = 1:length(unique_times)
         mask = [df.Time] == unique_times(i);
-        
-        % Filter df for the current Time
         current_time_data = df(mask);
+        
         figure;
         hold on;
         matrix = vertcat(current_time_data.NormalizedArea);
-        % Create histogram for the area
         h = histogram(matrix);
+            
+            % Generate tick labels
+        bin_edges = unique(matrix);
+        tick_labels = cellfun(@(x) int2str(x), num2cell(bin_edges), 'UniformOutput', false); % Convert bin edges to string
+        tick_labels(cellfun(@(x) str2double(x) == 7, tick_labels)) = {'>6'};        
+        % Modify x-axis tick labels
+        xticks(bin_edges);
+        xticklabels(tick_labels);
         
-        % Add labels and title
         xlabel('Area');
         ylabel('Frequency');
-        title(['Area Distribution for Time ', num2str(unique_times(i))]);
-        % Save the plot in the subfolder
+        title(['Area Distribution for Time ', int2str(unique_times(i))]);
+        
         file_name = sprintf('histogram_plot%d.png', unique_times(i));
         file_path = fullfile(path_save, subfolder, file_name);
         saveas(gcf, file_path);
         
-        % Close the current figure to prevent accumulation
         close(gcf);
     end
     
@@ -52,25 +51,28 @@ function plots(df, bins, path_save)
     
     for i = 1:length(unique_times)
         mask = [df_extreme.Time] == unique_times(i);
-        
-        % Filter df for the current Time
         current_time_data = df_extreme(mask);
+        
         figure;
         hold on;
         matrix = vertcat(current_time_data.NormalizedArea);
-        % Create histogram for the area
         h = histogram(matrix);
         
-        % Add labels and title
+        bin_edges = unique(matrix);
+        tick_labels = cellfun(@(x) int2str(x), num2cell(bin_edges), 'UniformOutput', false); % Convert bin edges to string
+        tick_labels(cellfun(@(x) str2double(x) == 7, tick_labels)) = {'>6'};       
+        % Modify x-axis tick labels
+        xticks(bin_edges);
+        xticklabels(tick_labels);
+        
         xlabel('Area');
         ylabel('Frequency');
-        title(['Area Distribution for Time ', num2str(unique_times(i))]);
-        % Save the plot in the subfolder
+        title(['Area Distribution for Time ', int2str(unique_times(i))]);
+        
         file_name = sprintf('extreme_plot%d.png', unique_times(i));
         file_path = fullfile(path_save, subfolder, file_name);
         saveas(gcf, file_path);
         
-        % Close the current figure to prevent accumulation
         close(gcf);
     end
     
@@ -80,18 +82,18 @@ function plots(df, bins, path_save)
     title('Distribution of Areas per Time Violin Plot');
     xlabel('Time');
     ylabel('Area');
+    
     file_name ='violin_plot.png';
     file_path = fullfile(path_save, subfolder, file_name);
     saveas(gcf, file_path);
     
-    % Close the current figure to prevent accumulation
     close(gcf);
 
+    % Calculate probability and standard deviation
     probability = struct(); % Initialize empty structure
 
     for i = 1:length(unique_times)
         mask = [df.Time] == unique_times(i);
-        % Filter df for the current Time
         current_time_data = df(mask);
 
         unique_areas = unique(vertcat(current_time_data.NormalizedArea));
@@ -110,31 +112,32 @@ function plots(df, bins, path_save)
         end
     end
     probability(:,1) = [];
+    
+    % Plot probability with error bars
     figure;
     hold on;
     legend_entries = {};  % Initialize legend entries
-    % Iterate over each unique time
+    
     for i = 1:length(unique_times)
-        % Filter the DataFrame for the current time
         mask = [probability.time] == unique_times(i);
-        % Filter df for the current Time
         current_time_data = probability(mask);
     
-        % Plot the probability of each ID for the current time
         plot(vertcat(current_time_data.area), vertcat(current_time_data.probability), 'o-');
-         % Calculate the positive and negative parts of the standard deviation
-        ;
+        errorbar(vertcat(current_time_data.area), vertcat(current_time_data.probability), vertcat(current_time_data.positive_sd));
+        matrix = unique(vertcat(current_time_data.area))
+        % Modify x-axis tick labels
+        bin_edges = unique(matrix);
+        tick_labels = cellfun(@(x) int2str(x), num2cell(bin_edges), 'UniformOutput', false); % Convert bin edges to string
+        tick_labels(cellfun(@(x) str2double(x) == 7, tick_labels)) = {'>6'};       
+        % Modify x-axis tick labels
+        xticks(bin_edges);
+        xticklabels(tick_labels);
+        % Store legend entry for current time
+        legend_entries{end+1} = ['Time ' int2str(unique_times(i))];
     
-        % Plot the probability of each ID for the current time with error bars
-        errorbar(vertcat(current_time_data.area), vertcat(current_time_data.probability), current_time_data.positive_sd, 'o-');
-            % Store legend entry for current time
-        legend_entries{end+1} = ['Time ' num2str(unique_times(i))];
-    
-        % Add labels and title
         xlabel('Number of Cells');
         ylabel('Probability');
         title('Probability of Each Number of Cells for Time');
-    
     end
     
     % Show the legend with entries for each time
@@ -142,9 +145,8 @@ function plots(df, bins, path_save)
     
     % Save the plot to a file
     file_name = 'plot_time.png';
-    saveas(gcf, file_name);
+    file_path = fullfile(path_save, subfolder, file_name);
+    saveas(gcf, file_path);
     
     hold off;  % Release hold on the figure
-
 end
-

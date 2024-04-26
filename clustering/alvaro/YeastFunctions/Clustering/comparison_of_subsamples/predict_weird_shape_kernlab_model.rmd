@@ -25,7 +25,7 @@ Emplearemos la función para codificar los datos y los separaremos en datos de e
 
 
 ```{r División de los datos}
-yeast <- read_csv("C:\\Users\\uib\\Desktop\\spor_differentiation\\labeled\\df_combinado.csv", 
+yeast <- read_csv("C:\\Users\\uib\\Nextcloud\\LAB\\Wetlab\\alvaro_desktop\\spor_differentiation\\labeled\\df_combinado.csv", 
     col_names = TRUE, show_col_types = FALSE)
 
 yeast$rare <- as.factor(yeast$rare)
@@ -33,10 +33,10 @@ yeast$rare <- as.factor(yeast$rare)
 # Puedes ajustar el nombre del dataframe según tu caso
 
 # Columnas que quieres eliminar
-columns_to_remove <- c(2, 3, 10, 11, 12)
+columns_to_remove <- c(2, 3, 10, 11, 12, 13)
 
 yeast_new <- yeast[, -columns_to_remove]
-scaled_centered_yeast_new <- as.data.frame(scale(yeast_new[ncol(yeast)]))
+scaled_centered_yeast_new <- as.data.frame(scale(yeast_new))
 scaled_normalized_data<-cbind(scaled_centered_yeast_new, yeast["rare"])
 ```
 
@@ -114,8 +114,9 @@ svm_radial_model_v2 <- train(rare ~ ., data = train_data,
                           metric = 'Accuracy',
                           tuneGrid = expand.grid(C = 1.74, 
                                sigma = 0.01))
-saveRDS(svm_radial_model_v2, paste0('C:\\Users\\uib\\Desktop\\spor_differentiation\\labeled\\', "classification_cells_not_wanted.rds"))
-  
+library(R.matlab)
+saveRDS(svm_radial_model_v2, paste0('C:\\Users\\uib\\Nextcloud\\LAB\\Wetlab\\alvaro_desktop\\spor_differentiation\\labeled\\', "classification_cells_not_wanted.rds"))
+writeMat("classification_cells_not_wanted.mat", a = svm_radial_model_v2)
 # Predecir con el modelo entrenado en los datos de prueba
 predictions <- predict(svm_radial_model_v2, newdata = test_data)
 
