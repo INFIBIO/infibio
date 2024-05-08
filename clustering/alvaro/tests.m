@@ -1,9 +1,14 @@
-% function tests(df, path_save)
+function tests(df, path_save)
+
+% Check if the 'results' folder exists, if not, create it
+results_folder = fullfile(path_save, 'results');
+if ~exist(results_folder, 'dir')
+    mkdir(results_folder);
+end
+
 % Check normal distribution and homoscedasticity
 % Perform Shapiro-Wilk test for normality
 % Initialize cell array to store Shapiro-Wilk test results
-df = mat_cleaned ;
-df=transpose(df);
 mask = ~isnan([df.Time]);
 clean_data = df(mask);
 unique_times = unique(horzcat(clean_data.Time));
@@ -21,16 +26,19 @@ end
 
 % Perform Levene's test for homogeneity of variances
 levene_test = vartestn(vertcat(clean_data.NormalizedArea), vertcat(clean_data.Time));
+% Save Levene's test to a CSV file
+writematrix(levene_test, fullfile(path_save, 'results', 'levene.csv'));
 
 % Perform Kruskal-Wallis test
-[p, tbl, stats] = kruskalwallis([clean_data.NormalizedArea], [clean_data.Time]);
+[~, ~, stats] = kruskalwallis([clean_data.NormalizedArea], [clean_data.Time]);
+% Save stats variable to a .mat file
+save(fullfile(path_save, 'results', 'kruskal.mat'), 'stats');
 
-% Save Kruskal-Wallis result to a CSV file
 % writetable(tbl, fullfile(path_save, 'results', 'kruskal.csv'));
 % clean_data = struct2table(clean_data)
 % Perform Tukey post hoc test
 
-[c, m, h, nms] = multcompare(stats, 'ctype', 'bonferroni', 'display', 'off', 'dimension', 2);
+[c, ~, ~, nms] = multcompare(stats, 'ctype', 'bonferroni', 'display', 'off', 'dimension', 2);
 
 % Create a table for Tukey post hoc result
 tukey_tbl = array2table(c, 'VariableNames', {'Group1', 'Group2', 'LowerCI','Difference', 'UpperCI', 'pValue'});
@@ -45,6 +53,8 @@ nms = nms(2:end, :);
 tukey_tbl.Group2 = cell2table(nms(idx));
 disp(tukey_tbl)
 
-% Save Tukey post hoc result to a CSV file
-%writetable(tukey_tbl, fullfile(path_save, 'results', 'tukey.csv'));
+% Split nested table in tukey_tbl
+tukey_tbl_split = splitvars(tukey_tbl);
 
+% Save Tukey post hoc result to a CSV file
+writetable(tukey_tbl_split, fullfile(path_save, 'results', 'tukey.csv'));
