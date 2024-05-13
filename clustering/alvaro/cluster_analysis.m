@@ -12,7 +12,8 @@
 % test files in .csv
 % Raya-Marin, Alvaro. 25.04.2024.
 
-% Specify the folder of interest with the .mat files.
+% Specify the folder of interest with the .mat files. If you're to compare
+% more than one experiment at time, specify each folder separately.
 pathOne = ['C:\Users\uib\Nextcloud\LAB\Wetlab\Yeast_experiments\Clustering ' ...
     'experiments\Exps_clustering_20240327_tiff\SK1_1000_30_0.1zymo'];
 pathTwo = ['C:\Users\uib\Nextcloud\LAB\Wetlab\Yeast_experiments\Clustering ' ...
@@ -20,19 +21,19 @@ pathTwo = ['C:\Users\uib\Nextcloud\LAB\Wetlab\Yeast_experiments\Clustering ' ...
 
 % The combineMatFiles is the function that will combine all .mat files with 
 % the results. It has four inputs, the path to the folder and the name of the
-% experiment, zymoliase concentration, shaking rpm and temperature. 
+% experiment path, zymoliase concentration (mg/mL), shaking rpm and temperature. 
 % The output is a struct with all the data combined.
 
 mat_combinedOne = combineMatFiles(pathOne, 0.05, 250, 30);
 mat_combinedTwo = combineMatFiles(pathTwo, 0, 250, 30);
 
-% Combine tables
+% Combine tables: add inside the square brackets each mat file to combine
 mat_combined = [mat_combinedOne; mat_combinedTwo];
 
 
 % Clean up weird cell shapes. An SVM model with > 99% of accuracy
-% distinguish between weird shapes produced in the binarization and good
-% shaped cells to delete those rows.
+% distinguishes between weird shapes produced in the binarization and good
+% shaped cells to delete weird shaped cell's rows.
 mat_cleaned = clean_weird_shapes(mat_combined);
 
 % Plots function will generate the plots specified in the function. 
