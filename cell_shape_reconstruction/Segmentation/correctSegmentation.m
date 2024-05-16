@@ -6,7 +6,7 @@ myfiles = dir([imgpath,'*.',imgextension]);
 %% Parameter definition
 %%Segmentation
 invert = 1;
-paramSegment.int_threshold = 4.325310e+04;
+paramSegment.int_threshold = 2.325310e+04;
 paramSegment.mode_threshold = 5e4;
 paramSegment.arearange = [2000,inf];
 paramSegment.morph_close_radius = 3;

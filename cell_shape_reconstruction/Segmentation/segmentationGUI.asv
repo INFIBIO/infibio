@@ -59,32 +59,14 @@ function segmentationGUI(img, param, features)
             return;
         end
             
-        
-      
-        imageSegmenter(croppedImage);
-        
-        % Instruir al usuario a guardar la máscara refinada
-        disp('Please refine the segmentation in the Image Segmenter App.');
-        disp('After refining, save the mask as "refinedMask" and close the app.');
-        
-         % Esperar a que el usuario guarde la máscara refinada y cierre la aplicación
-        waitfor(msgbox('Press OK after saving the refined mask as variable "refinedMask" in the workspace and closing the Image Segmenter App.'));
-        
-        % Esperar hasta que la variable refinedMask esté en el workspace
-        while true
-            pause(1); % Esperar 1 segundo antes de comprobar nuevamente
-            if evalin('base', 'exist(''refinedMask'', ''var'')')
-                break;
-            end
-        end
-        
-        % Cargar la máscara refinada desde el espacio de trabajo
-        BW = evalin('base', 'refinedMask');
-        
-        % Asegurarse de que la máscara refinada es binaria
-        if size(BW, 3) > 1
-            BW = BW(:,:,1) > 128; % Convertir a binario si es necesario
-        end
+        segmenter = imageSegmenter(croppedImage);
+        waitfor(segmenter);  % Esperar a que el usuario cierre la aplicación
+        BW = segmenter.CurrentMask;
+        maskedImage = croppedImage;
+        maskedImage(~BW) = 0;
+        imshow(croppedImage, 'Parent', originalAxes);
+        imshow(BW, 'Parent', segmentedAxes);
+        % Actualizar el PixelIdxList correspondiente en features
          fullBW = false(size(img, 1), size(img, 2));
     
         % Calcular las coordenadas de asignación en fullBW
