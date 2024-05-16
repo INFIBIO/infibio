@@ -48,7 +48,7 @@
 %the four cells in the tetrad 
 
 %% Input and output info
-imgpath = 'C:\Users\uib\Nextcloud\LAB\Wetlab\alvaro_desktop\prueba_script_python\Exp_Zymolyase01-005_ConA03-2024110\F1\3\tiff\';
+imgpath = 'C:\Users\uib\Desktop\diploid-spor diff\';
 datapath = [imgpath,'data/'];
 imgextension = 'tif'; %make sure you use single quotation marks, e.g. 'tif', and not double, e.g. "tif". String concatenation is different
 
