@@ -24,5 +24,6 @@ for tt = 1:length(myfiles)
 
     %read new image
     
-    segmentationGUI(img, paramSegment, features);
+    features_modified = segmentationGUI(img, paramSegment, features);
+    saveCorrectedImageAndAnnotations(img, features, imgpath)
 end
