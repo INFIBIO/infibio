@@ -1,6 +1,6 @@
 function saveCorrectedImageAndAnnotations(img, features, savepath)
     % Obtener el timestamp actual
-    timestamp = string(datetime('now', 'Format', 'ddMMyyyy_HHmmssSSS')); % Formato: ddMMyyyy_HHmmssSSS
+    timestamp = str(datetime('now', 'Format', 'ddMMyyyy_HHmmssSSS'); % Formato: ddMMyyyy_HHmmssSSS
 
     
     % Reconstruir la máscara completa a partir de los PixelIdxList
@@ -10,15 +10,15 @@ function saveCorrectedImageAndAnnotations(img, features, savepath)
     end
 
     % Guardar la imagen completa y la máscara con el timestamp
-    correctedImageFileName = fullfile(savepath, strcat('corrected_image_', timestamp, '.png'));
+    correctedImageFileName = fullfile(savepath, ['corrected_image_' timestamp '.png']);
     imwrite(img, correctedImageFileName);
 
-    maskFileName = fullfile(savepath, strcat('corrected_mask_', timestamp, '.png'));
+    maskFileName = fullfile(savepath, ['corrected_mask_' timestamp '.png']);
     imwrite(fullBW, maskFileName);
 
     % Crear y guardar las anotaciones en formato YOLO
     [height, width, ~] = size(img);
-    annotationFileName = fullfile(savepath, strcat('annotations_', timestamp, '.txt'));
+    annotationFileName = fullfile(savepath, ['annotations_' timestamp '.txt']);
     fileID = fopen(annotationFileName, 'w');
     for k = 1:length(features)
         bbox = round(features(k).BoundingBox); % Asegurar que bbox son enteros
