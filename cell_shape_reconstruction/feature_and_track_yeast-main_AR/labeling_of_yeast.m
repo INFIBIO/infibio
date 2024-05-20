@@ -14,8 +14,9 @@
 % exit if the user chooses to exit the selection process.
 
 %% Input and output info
-imgpath = 'C:\Users\uib\Desktop\diploid-spor diff\Network_training_IMAGES\';
+imgpath = 'C:\Users\alvar\Desktop\Network_training_IMAGES\TIFF\';
 datapath = [imgpath,'data/'];
+labelpath = [imgpath, 'labels/'];
 imgextension = 'tif'; %make sure you use single quotation marks, e.g. 'tif', and not double, e.g. "tif". String concatenation is different
 
 %% Parameter definition
@@ -31,22 +32,25 @@ paramFeature.minlen = 4;
 paramFeature.maxlen = inf;
 paramFeature.b_init = 1;
 
-%%Tracking
-paramTracks.maxdisp = 10;
-paramTracks.mem = 0;
-paramTracks.good = 2;
-paramTracks.dim = 2;
-paramTracks.quiet = 1;
-tracks = [];
-
 %% Gather list of files and perform analysis
 if ~isdir(datapath)
     mkdir(datapath)
 end
+if ~isdir(labelpath)
+    mkdir(labelpath)
+end
 myfiles = dir([imgpath,'*.',imgextension]);
 imageFiles = cell(length(struct), 1);
 labels = cell(length(struct), 1);
-for tt = 1:length(myfiles)
+
+% Get the last tt and i analyzed
+[last_tt, last_i] = get_last_tt_i(labelpath);
+if last_tt == 0
+    last_tt = 1;
+end
+images = list()
+for tt = last_tt:length(myfiles)
+
     
     if mod(tt-1,10)==0
         disp(['Extracting features from frame ',num2str(tt),' out of ',num2str(length(myfiles))]);
@@ -54,21 +58,33 @@ for tt = 1:length(myfiles)
 
     %read new image
     img = imread([imgpath,myfiles(tt).name]);
+    img_jpg = im2uint8(img); % Convert to uint8
+    fileName = fullfile(datapath, sprintf('%d.jpg', tt)); % Save as jpg
+    imwrite(img_jpg, fileName); % Save the image
+    
     [~,imgname,~] = fileparts(myfiles(tt).name);
-
+    images{end+1} = imgname;
     %invert if needed
     if invert
         img = imcomplement(img);
     end
 
     [BWimg,maskedImage] = segmentImage(img,paramSegment); %segmentation
-    
+    try
     features = feature_connected_components(BWimg,paramFeature); %featuring
+    
     % Loop through each bounding box
     imshow(maskedImage);
     i = 1; % Inicializar i fuera del bucle
+    if tt == last_tt
+        i = last_i + 1;
+    end
     while i <= length(features)
-       
+       if length(features(i).pxlborder) < 2
+            disp('Not enough points for interpolation, skipping this feature.');
+            i = i + 1;
+            continue;
+        end
         % Get the bounding box
         bbox = features(i).BoundingBox;
         % Crop the image to the bounding box
@@ -76,7 +92,7 @@ for tt = 1:length(myfiles)
         croppedImage = im2uint8(croppedImage);
         croppedImage = imadjust(croppedImage, stretchlim(croppedImage), []);
         % Save the cropped image to a file
-        fileName = fullfile(datapath, sprintf('croppedImage%d%d.jpg', tt, i));
+        fileName = fullfile(datapath, sprintf('croppedImage_%d_%d.jpg', tt, i));
         imwrite(croppedImage, fileName);
         % Store the file name
         imageFiles{end+1} = fileName;
@@ -134,10 +150,13 @@ for tt = 1:length(myfiles)
         % Map user choice to corresponding label
         if str2double(user_choice) == 1
             user_input_label = 'Haploid/Diploid';
+            class_id = 0; % Corresponding class ID for YOLO
         elseif str2double(user_choice) == 2
             user_input_label = 'Sporulated';
+            class_id = 1; % Corresponding class ID for YOLO
         else
             user_input_label = 'Discard';
+            class_id = 2; % Corresponding class ID for YOLO
         end
     
         % Display the user input next to the bounding box
@@ -147,28 +166,102 @@ for tt = 1:length(myfiles)
         features(i).UserInputLabel = user_input_label;
         % Store the user input label
         labels{end+1} = features(i).UserInputLabel;
+        % Normalize bounding box coordinates for YOLO format
+        centerX = (bbox(1) + bbox(3) / 2) / size(img, 2);
+        centerY = (bbox(2) + bbox(4) / 2) / size(img, 1);
+        width = bbox(3) / size(img, 2);
+        height = bbox(4) / size(img, 1);
+        
+        % Save the YOLO annotation to a file
+        annotationFile = fullfile(labelpath, sprintf('croppedImage_%d_%d.txt', tt, i));
+        disp(['Saving annotation to file: ', annotationFile]);
+        fileID = fopen(annotationFile, 'w');
+        if fileID == -1
+            error('Error opening file: %s', annotationFile);
+        end
+        
+        
+        fprintf(fileID, '%d %.6f %.6f %.6f %.6f\n', class_id, centerX, centerY, width, height);
+        fclose(fileID);
+
         % Close the displayed bounding box
         close(gcf);
         
         % Increment i only if the user didn't choose 'r'
         i = i + 1;
     end
-     % Convert cell arrays to categorical array for labels
-  
-  
+    catch ME
+        disp(['Error processing frame ', num2str(tt), ': ', ME.message]);
+        continue; % Continue to next frame in case of error
+    end
+    % Join all annotation files for each image
+    imwrite(img_jpg, fileName); % Save the image
+    annotationFiles = dir(fullfile(labelpath, sprintf('croppedImage_%d_*.txt', tt)));
+    combinedAnnotationFile = fullfile(labelpath, sprintf('%d.txt', tt));
+    combinedFileID = fopen(combinedAnnotationFile, 'w');
+
+    if combinedFileID == -1
+        error('Error opening file: %s', combinedAnnotationFile);
+    end
+    for k = 1:length(annotationFiles)
+        annotationFile = fullfile(labelpath, annotationFiles(k).name);
+        fileID = fopen(annotationFile, 'r');
+        if fileID == -1
+            error('Error opening file: %s', annotationFile);
+        end
+        data = fread(fileID, '*char');
+        fwrite(combinedFileID, data);
+        fclose(fileID);
+    end
+    fclose(combinedFileID);
+
 end
 % Convert cell arrays to categorical array for labels
 labels = labels(2:end);
-
 labels = categorical(labels);
 imageFiles = imageFiles(2:end);
-labels = categorical(labels);
+
+% Move the analyzed images to the "already_labeled" folder
+for i = 1:length(imageFiles)
+
+    alreadyLabeledPath = [datapath, 'already_labeled/'];
+    imageName = images{i};
+    movefile(images{i}, [alreadyLabeledPath, imageName, '.jpg']);
+end
 
 % Create an imageDatastore for storing the image files and labels
 imds = imageDatastore(imageFiles, 'Labels', labels);
 % Create an imageDatastore for storing the images and labels
 % Save the imageDatastore to a MAT file
 save([datapath, 'imageDatastore.mat'], 'imds');
+
+% Create an imageDatastore for storing the image files and labels
+imds = imageDatastore(imageFiles, 'Labels', labels);
+% Create an imageDatastore for storing the images and labels
+% Save the imageDatastore to a MAT file
+save([datapath, 'imageDatastore.mat'], 'imds');
+
+% Function to get the last tt and i analyzed
+function [last_tt, last_i] = get_last_tt_i(labelpath)
+    label_files = dir([labelpath, '*.txt']);
+    last_tt = 0;
+    last_i = 0;
+    for k = 1:length(label_files)
+        [~, name, ~] = fileparts(label_files(k).name);
+        tokens = regexp(name, 'croppedImage(\d+)_(\d+)', 'tokens');
+        if ~isempty(tokens)
+            tt = str2double(tokens{1}{1});
+            i = str2double(tokens{1}{2});
+            if tt > last_tt
+                last_tt = tt;
+                last_i = i;
+            elseif tt == last_tt && i > last_i
+                last_i = i;
+            end
+        end
+    end
+end
+
 % % Define the YOLO network architecture
 % layers = [
 %     imageInputLayer([224 224 3])

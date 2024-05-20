@@ -1,5 +1,5 @@
 %% Input and output info
-imgpath = 'C:\Users\uib\Desktop\diploid-spor diff\Network_training_IMAGES\';
+imgpath = 'C:\Users\alvar\Desktop\Network_training_IMAGES\TIFF\';
 datapath = [imgpath,'data/'];
 imgextension = 'tif'; %make sure you use single quotation marks, e.g. 'tif', and not double, e.g. "tif". String concatenation is different
 myfiles = dir([imgpath,'*.',imgextension]);
