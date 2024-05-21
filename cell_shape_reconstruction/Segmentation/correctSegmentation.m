@@ -1,8 +1,9 @@
 %% Input and output info
-imgpath = 'C:\Users\alvar\Desktop\Network_training_IMAGES\TIFF\';
-datapath = [imgpath,'data/'];
-imgextension = 'tif'; %make sure you use single quotation marks, e.g. 'tif', and not double, e.g. "tif". String concatenation is different
-myfiles = dir([imgpath,'*.',imgextension]);
+imgpath = 'C:\Users\alvar\Desktop\Network_training_IMAGES\already_labeled\';
+datapath = [imgpath, 'data/'];
+annotationsFile = fullfile(datapath, 'annotations.json');
+imgextension = 'tif';
+myfiles = dir([imgpath, '*.', imgextension]);
 %% Parameter definition
 %%Segmentation
 invert = 1;
@@ -20,10 +21,11 @@ for tt = 1:length(myfiles)
         img = imcomplement(img);
     end
     [BW, maskedImage] = segmentImage_AR(img, paramSegment);
-    features = regionprops(BW, "BoundingBox");
+    features = regionprops(BW, "BoundingBox", "PixelIdxList");
 
     %read new image
     
-    features_modified = segmentationGUI(img, paramSegment, features);
-    saveCorrectedImageAndAnnotations(img, features_modified, imgpath)
+    features_modified = segmentationGUI(img, paramSegment, features, tt);
+    saveCorrectedImageAndAnnotations2(img, features_modified, imgpath, tt, annotationsFile);
+
 end

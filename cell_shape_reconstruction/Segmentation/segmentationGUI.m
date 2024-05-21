@@ -1,4 +1,4 @@
-function updatedFeatures = segmentationGUI(img, param, features)
+function updatedFeatures = segmentationGUI(img, param, features, imgId)
     % Crear la figura principal
     fig = uifigure('Name', 'Segmentation Review Tool', 'Position', [100, 100, 800, 600]);
 
@@ -33,6 +33,7 @@ function updatedFeatures = segmentationGUI(img, param, features)
     % Esperar a que se cierre la figura antes de continuar
     uiwait(fig);
     updatedFeatures = features;
+
     function showBoundingBox()
         if bboxIndex <= length(features)
             bbox = features(bboxIndex).BoundingBox;
@@ -49,11 +50,8 @@ function updatedFeatures = segmentationGUI(img, param, features)
     end
 
     function redoSegmentation()
-        % Aquí puedes añadir código para rehacer la segmentación manualmente
-        % Por ejemplo, usando roipoly para dibujar manualmente
         bbox = features(bboxIndex).BoundingBox;
         croppedImage = imcrop(img, bbox);
-        %croppedImage = imadjust(croppedImage, stretchlim(croppedImage), []);
         if isempty(croppedImage)
             disp('Error: Cropped image is empty.');
             return;
@@ -61,37 +59,30 @@ function updatedFeatures = segmentationGUI(img, param, features)
 
         imageSegmenter(croppedImage);
         
-        % Instruir al usuario a guardar la máscara refinada
         disp('Please refine the segmentation in the Image Segmenter App.');
         disp('After refining, save the mask as "BW" and close the app.');
         
-         % Esperar a que el usuario guarde la máscara refinada y cierre la aplicación
         waitfor(msgbox('Press OK after saving the refined mask as variable "BW" in the workspace.'));
         
-        % Esperar hasta que la variable refinedMask esté en el workspace
         while true
-            pause(1); % Esperar 1 segundo antes de comprobar nuevamente
+            pause(1);
             if evalin('base', 'exist(''BW'', ''var'')')
                 break;
             end
         end
-        % 
-        % Cargar la máscara refinada desde el espacio de trabajo
+        
         BW = evalin('base', 'BW');
         
-        % Asegurarse de que la máscara refinada es binaria
         if size(BW, 3) > 1
-            BW = BW(:,:,1) > 128; % Convertir a binario si es necesario
+            BW = BW(:,:,1) > 128;
         end
         fullBW = false(size(img, 1), size(img, 2));
     
-        % Calcular las coordenadas de asignación en fullBW
         y1 = round(bbox(2));
         y2 = y1 + size(BW, 1) - 1;
         x1 = round(bbox(1));
         x2 = x1 + size(BW, 2) - 1;
     
-        % Asegurarse de que las dimensiones coinciden antes de la asignación
         if y2 > size(fullBW, 1)
             y2 = size(fullBW, 1);
         end
@@ -102,34 +93,40 @@ function updatedFeatures = segmentationGUI(img, param, features)
         fullBW(y1:y2, x1:x2) = BW(1:(y2-y1+1), 1:(x2-x1+1));
         imshow(fullBW(y1:y2, x1:x2) , 'Parent', segmentedAxes);
         features(bboxIndex).PixelIdxList = find(fullBW);
-        % Continuar al siguiente cuadro delimitador
+        features(bboxIndex).Segmentation = getSegmentation(fullBW); % Add segmentation data
+        features(bboxIndex).Area = sum(fullBW(:)); % Calculate area
         bboxIndex = bboxIndex + 1;
         showBoundingBox();
     end
+
     function acceptSegmentation()
-            % Guardar la segmentación actual en features
-            bbox = round(features(bboxIndex).BoundingBox); % Asegurar que bbox son enteros
-            croppedImage = imcrop(img, bbox);
-            [height, width] = size(croppedImage);
-            [BW, ~] = segmentImage_AR(img, param);
-            BW = imcrop(BW, bbox);
-            if size(BW, 1) ~= height || size(BW, 2) ~= width
-                error('Dimensions of BW and croppedImage do not match');
-            end
-            
-            fullBW = false(size(img, 1), size(img, 2));
-            fullBW(bbox(2):(bbox(2)+height-1), bbox(1):(bbox(1)+width-1)) = BW;
-            features(bboxIndex).PixelIdxList = find(fullBW);
-    
-            % Continuar al siguiente cuadro delimitador
-            bboxIndex = bboxIndex + 1;
-            
-            showBoundingBox();
+        bbox = round(features(bboxIndex).BoundingBox);
+        croppedImage = imcrop(img, bbox);
+        [height, width] = size(croppedImage);
+        [BW, ~] = segmentImage_AR(img, param);
+        BW = imcrop(BW, bbox);
+        if size(BW, 1) ~= height || size(BW, 2) ~= width
+            error('Dimensions of BW and croppedImage do not match');
         end
+        
+        fullBW = false(size(img, 1), size(img, 2));
+        fullBW(bbox(2):(bbox(2)+height-1), bbox(1):(bbox(1)+width-1)) = BW;
+        features(bboxIndex).PixelIdxList = find(fullBW);
+        features(bboxIndex).Segmentation = getSegmentation(fullBW); % Add segmentation data
+        features(bboxIndex).Area = sum(fullBW(:)); % Calculate area
+        bboxIndex = bboxIndex + 1;
+        showBoundingBox();
+    end
+
     function backSegmentation()
-            % Continuar al anterior cuadro delimitador
-            bboxIndex = bboxIndex - 1;
-            showBoundingBox();
-        end
-    
+        bboxIndex = bboxIndex - 1;
+        showBoundingBox();
+    end
+
+    function segmentation = getSegmentation(mask)
+        [rows, cols] = find(mask);
+        segmentation = [cols, rows]'; % Format as [x1, y1, x2, y2, ..., xn, yn]
+        segmentation = segmentation(:)';
+    end
 end
+

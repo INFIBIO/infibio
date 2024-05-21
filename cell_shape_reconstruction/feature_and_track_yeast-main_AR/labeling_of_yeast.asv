@@ -18,7 +18,7 @@ imgpath = 'C:\Users\alvar\Desktop\Network_training_IMAGES\TIFF\';
 datapath = [imgpath,'data/'];
 labelpath = [imgpath, 'labels/'];
 imgextension = 'tif'; %make sure you use single quotation marks, e.g. 'tif', and not double, e.g. "tif". String concatenation is different
-alreadyLabeledPath = fullfile('C:\Users\alvar\Desktop\Network_training_IMAGES\', 'already_labeled');
+
 %% Parameter definition
 %%Segmentation
 invert = 1;
@@ -62,7 +62,7 @@ for tt = last_tt:length(myfiles)
     fileName = fullfile(datapath, sprintf('%d.jpg', tt)); % Save as jpg
     imwrite(img_jpg, fileName); % Save the image
     image = fullfile(myfiles(tt).folder,myfiles(tt).name);
-    images{end+1} = image;
+    images(end+1) = fullfile(myfiles(tt).folder,myfiles(tt).name);
     [~,imgname,~] = fileparts(myfiles(tt).name);
     
     %invert if needed
@@ -223,31 +223,11 @@ labels = categorical(labels);
 imageFiles = imageFiles(2:end);
 
 % Move the analyzed images to the "already_labeled" folder
-;
-
-% Ensure the alreadyLabeledPath directory exists
-if ~exist(alreadyLabeledPath, 'dir')
-    mkdir(alreadyLabeledPath);
+for i = 1:length(images)
+    alreadyLabeledPath = [datapath, 'already_labeled/'];
+    imageName = images{i};
+    movefile(images{i}, [alreadyLabeledPath, imageName, '.jpg']);
 end
-
-for i = 2:length(images)
-    fullImagePath = images{i}; % This is the full path of the image
-    
-    % Ensure fullImagePath is a character array or string
-    if isstring(fullImagePath)
-        fullImagePath = char(fullImagePath); % Convert to char
-    elseif ~ischar(fullImagePath)
-        error('Image path must be a character array or string.');
-    end
-    
-    [~, imageName, ext] = fileparts(fullImagePath); % Extract file name and extension
-    sourcePath = fullImagePath; % Source path is full path of the image
-    destPath = fullfile(alreadyLabeledPath, [imageName, ext]); % Construct destination path
-
-    % Move the file
-    movefile(sourcePath, destPath);
-end
-
 
 % Create an imageDatastore for storing the image files and labels
 imds = imageDatastore(imageFiles, 'Labels', labels);
