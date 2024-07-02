@@ -8,7 +8,7 @@ To use the cell classification model developed with YOLOv5, follow these steps:
 ```
 conda env create -f yolo5v-env.yaml
 ```
-This must have installed all the dendendencies needed in conda.
+This must have installed all the dependencies needed in conda.
 
 2. Clone yolov5:
 ```
