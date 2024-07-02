@@ -21,6 +21,8 @@ pyenv('Version', pythonPath);
 4. Specify the directories.
 
 In the run_yolo_img.m is necessary to specify the following directories:
+```
 python_executable = 'path/in/conda/to/python.exe';
 detect_script = 'path/in/cloned/repo/to/predict.py';
 weights = 'path/to/yolov5/weights/best.pt';
+```
