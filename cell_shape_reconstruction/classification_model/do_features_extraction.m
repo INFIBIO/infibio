@@ -35,14 +35,18 @@
 %corresponding to the object with trackedID "M" would correspond to those
 %of "features(Y)". So, for example "features(Y).outs" would give the
 %contour length along the boundary, and "features(Y).theta" would give the
-%corresponding tangent angle.
+%corresponding tangent angle. Classification function adds a DetectedClass
+%variable to features, "features(Y).DetectedClass". classification function
+%needs as input the features struct with at least the BoundingBox
+%variables, the raw image, and the paths to python executable, yolov5
+%folder, predict script and best.pt weights.
 %
 %AR: implemented run_yolo_img.m function to classify cells into
 %haploid/diploid, sporulated and else.
 
 %HISTORY: 
 %   5 April, 2024: MP. Created.
-%   2 July, 2024: AR. Modified.
+%   4 July, 2024: AR. Modified.
 %
 %TODO:
 %1) Write programs to "pull" a given set of parameters for an object with a
