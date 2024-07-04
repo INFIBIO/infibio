@@ -62,8 +62,8 @@ imgextension = 'tif'; %make sure you use single quotation marks, e.g. 'tif', and
 %% Parameter definition
 %%Segmentation
 invert = 1;
-paramSegment.int_threshold = 127;
-paramSegment.mode_threshold = 100;
+paramSegment.int_threshold = 127; % Adjust for each set of images
+paramSegment.mode_threshold = 100; % Adjust for each set of images
 paramSegment.arearange = [2000,inf];
 paramSegment.morph_close_radius = 3;
 
