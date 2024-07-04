@@ -76,6 +76,12 @@ paramTracks.dim = 2;
 paramTracks.quiet = 1;
 tracks = [];
 
+%Classification
+python_path = '';
+yolo_path = '';
+predict_script = '';
+weights = '';
+
 %% Gather list of files and perform analysis
 if ~isdir(datapath)
     mkdir(datapath)
@@ -99,7 +105,9 @@ for tt = 1:length(myfiles)
 
     [BWimg,maskedImage] = segmentImage(img,paramSegment); %segmentation
     features = feature_connected_components(BWimg,paramFeature); %featuring
-    features = run_yolo_img(img, features);
+
+
+    features = classification(img, features, python_path, yolo_path, predict_script, weights); %classification of the bbox.s
     tracks = [tracks;[vertcat(features.Centroid),... %assemble array that will be used to track the features
         vertcat(features.Area),... %repeat this structure in the following line if you want to add an extra column representing a numeric property of the features. This might be useful to have in the array "tracks" later on
         (1:length(features))',tt*ones(length(features),1)]];
