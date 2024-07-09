@@ -14,15 +14,26 @@ This must have installed all the dependencies needed in conda.
 ```
 git clone https://github.com/ultralytics/yolov5.git
 ```
-3. Configure python environment in Matlab.
-```
-pyenv('Version', pythonPath);
-```
-4. Specify the directories.
 
-In the run_yolo_img.m is necessary to specify the following directories:
+3. Specify the directories.
+
+In the do_features_extraction.m is necessary to specify the following directories:
 ```
-python_executable = 'path/in/conda/to/python.exe';
-detect_script = 'path/in/cloned/repo/to/predict.py';
-weights = 'path/to/yolov5/weights/best.pt';
+python_path = 'path/in/conda/to/python.exe';
+yolo_path = 'path/to/yolov5';
+predict_script = 'path/in/cloned/repo/to/predict.py';
+weights = 'path/to/yolov5/weights/best.pt;
 ```
+4. Correct dependencies.
+Add these lines to the predict.py to solve problems with dependencies:
+
+## For Windows users:
+from pathlib import Path
+import pathlib
+temp = pathlib.PosixPath
+pathlib.PosixPath = pathlib.WindowsPath
+## For Linux users (or deploying for Linux):
+from pathlib import Path
+import pathlib
+temp = pathlib.WindowsPath
+pathlib.WindowsPath = pathlib.PosixPath
