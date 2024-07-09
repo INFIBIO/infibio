@@ -1,6 +1,6 @@
 # Cell classification using YOLOv5 model
 
-The run_yolo_img.m function is already implemented in do_features_extraction.m to extract the features and classify bbox for further analysis. 
+The classification.m function is already implemented in do_features_extraction.m to extract the features and classify bbox for further analysis. 
 
 To use the cell classification model developed with YOLOv5, follow these steps:
 
