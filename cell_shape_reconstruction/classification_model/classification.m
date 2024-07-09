@@ -88,5 +88,3 @@ function [features] = classification(img, props, python_path, yolo_path, predict
     end
     features = props;
 end
-
->>>>>>> a171258d9043fda1582cd99a9fef928c708e477b
