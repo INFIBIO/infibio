@@ -1,9 +1,14 @@
-function combinedData = combineMatFiles(folderPath)
+function combinedData = combineMatFiles(folderPath, Zymoliase, Shaker, Temperature)
     % Get the list of .mat files in the directory and its subfolders
     matFiles = dir(fullfile(folderPath, '**', '*.mat'));
     
     % Initialize an empty data structure
-    combinedData = struct('Area', [], 'Centroid', [],  'Perimeter', [], 'Circularity', [], 'Eccentricity', [], 'Solidity', [], 'MinorAxisLength', [], 'MajorAxisLength', [], 'Concentration', [], 'Time', [], 'Enumeration', [], 'Well', [], 'Replica', [], 'NormalizedArea', []);
+    combinedData = struct('Area', [], 'Centroid', [],  'Perimeter', [], ...
+        'Circularity', [], 'Eccentricity', [], 'Solidity', [], ...
+        'MinorAxisLength', [], 'MajorAxisLength', [], 'Concentration', [], ...
+        'Time', [], 'Enumeration', [], 'Well', [], 'Replica', [], ...
+        'NormalizedArea', [], 'Zymoliase', [], 'Shaker', [], ...
+        'Temperature', []);
     
     % Iterate over each .mat file
     for i = 1:numel(matFiles)
@@ -35,11 +40,17 @@ function combinedData = combineMatFiles(folderPath)
                 propsbw_cleaned(j).Well = [];
                 propsbw_cleaned(j).Replica = [];
                 propsbw_cleaned(j).NormalizedArea = [];
+                propsbw_cleaned(j).Zymoliase = [];
+                propsbw_cleaned(j).Shaker = [];
+                propsbw_cleaned(j).Temperature = [];
             end
             % Add fields to the data structure
             for k = 1:length(propsbw_cleaned)
                 propsbw_cleaned(k).Well = well;
                 propsbw_cleaned(k).Replica = replicate;
+                propsbw_cleaned(k).Zymoliase = Zymoliase;
+                propsbw_cleaned(k).Shaker = Shaker;
+                propsbw_cleaned(k).Temperature = Temperature,
                 % Change values in NormalizedArea
                 if normalizedArea(k) > 6
                     % Since it's difficult to distinguish the number of
@@ -57,3 +68,5 @@ function combinedData = combineMatFiles(folderPath)
         end
     end
 combinedData(1) = [];
+combinedData = struct2table(combinedData);
+end
