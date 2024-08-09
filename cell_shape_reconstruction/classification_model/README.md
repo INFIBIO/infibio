@@ -26,7 +26,7 @@ weights = 'path/to/yolov5/weights/best.pt;
 ```
 4. Correct dependencies.
 Add these lines to the predict.py to solve problems with dependencies:
-
+```
 ## For Windows users:
 from pathlib import Path
 import pathlib
@@ -37,3 +37,4 @@ from pathlib import Path
 import pathlib
 temp = pathlib.WindowsPath
 pathlib.WindowsPath = pathlib.PosixPath
+```
