@@ -11,8 +11,10 @@ conda env create -f yolo5v-env.yaml
 This must have installed all the dependencies needed in conda.
 
 2. Download yolov5:
+   
 Download the modified yolov5 repository.
-3. Configure python environment in Matlab.
+
+4. Configure python environment in Matlab.
 ```
 pyenv('Version', pythonPath);
 ```
