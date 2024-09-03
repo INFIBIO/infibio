@@ -1,131 +1,175 @@
-%Script for the first-level analysis of the images from the experiments of
-%yeast digestion. The images are first segmented, then featured and finally
-%the features are tracked. The features (see below) of each image are saved
-%in individual files for subsequent use. As the program cycles through the
-%series of images, the script assembles the array "tracks", which is then
-%used as input for the tracking program ("track.m"), adapted from Crocker
-%and Grier. After rearranging the output, the array "tracks" is saved in
-%the same folder where the feature files are saved. 
-%The array "tracks" has one feature per row, with the columns being
-%organised as
-%(CentroidXposition, CentroidYposition, Area, ..., frame, naiveID,
-%trackedID). 
-%Here the "..." are due to the fact that one can add in there more
-%parameters characterising the features, if useful to have later on in the
-%array "tracks".
-%The naiveID is the ID of the feature when that frame is featured first,
-%while trackedID is the ID of that feature once tracked. 
-%For example, in order to follow the object with trackID equal to "M", one
-%needs to select the rows in "tracks" that have the value "M" in the last
-%column. The corresponding frames will be listed in the third-to-last
-%column and the naiveID of that object for those frames will be the
-%penultimate column. Notice that an object that has trackedID "M", will
-%have in general several different naiveIDs for the different frames it
-%exists in. From those rows one can then see the time evolution, for object
-%"M", of any of the characteristics saved in "tracks" for object "M". If
-%one needs to see other characteristics that are not currently saved in
-%"tracks", they can read them from the files "XXXX_features.mat"
-%corresponding to the frames in which object "M" exists. For example, if a
-%row of "tracks" ends with 
-%   (.....,T,Y,M)
-%this means that object "M" exists in frame "T", and there it corresponds
-%to the object with naiveID "Y". One would then read the
-%"XXXX_features.mat" file corresponding to frame "T" and retrieve the
-%structure "features" corresponding to that file. The features
-%corresponding to the object with trackedID "M" would correspond to those
-%of "features(Y)". So, for example "features(Y).outs" would give the
-%contour length along the boundary, and "features(Y).theta" would give the
-%corresponding tangent angle. Classification function adds a DetectedClass
-%variable to features, "features(Y).DetectedClass". classification function
-%needs as input the features struct with at least the BoundingBox
-%variables, the raw image, and the paths to python executable, yolov5
-%folder, predict script and best.pt weights.
+% Script for the first-level analysis of images from yeast digestion
+% experiments. The images are first segmented, then features are extracted,
+% and finally, the features are tracked. Features of each image are saved
+% in individual files for subsequent use. The script assembles the "tracks"
+% array, which is then used as input for the tracking program ("track.m"),
+% adapted from Crocker and Grier. After rearranging the output, the
+% "tracks" array is saved in the same folder where the feature files are
+% saved.
 %
-%AR: implemented classification.m function to classify cells into
-%haploid/diploid, sporulated and else.
+% The "tracks" array has one feature per row, with columns organized as:
+% (CentroidXposition, CentroidYposition, Area, ..., frame, naiveID,
+% trackedID). Here, "..." represents additional parameters characterizing
+% the features, if needed in the "tracks" array. The naiveID is the ID of
+% the feature when it is first featured in that frame, while trackedID is
+% the ID once tracked. For example, to track the object with trackID "M",
+% select the rows in "tracks" where the last column is "M". The
+% corresponding frames are listed in the third-to-last column, and the
+% naiveID of that object for those frames will be in the penultimate
+% column. An object with trackedID "M" will generally have several naiveIDs
+% for different frames. From these rows, you can observe the time evolution
+% of any characteristic saved in "tracks" for object "M". If other
+% characteristics are needed, read them from "XXXX_features.mat" files
+% corresponding to frames where object "M" exists. For example, if a row of
+% "tracks" ends with (.....,T,Y,M), it means object "M" exists in frame
+% "T", and it corresponds to the object with naiveID "Y". Read the
+% "XXXX_features.mat" file for frame "T" to retrieve the features. The
+% features for object with trackedID "M" correspond to "features(Y)". For
+% instance, "features(Y).outs" gives contour length, and
+% "features(Y).theta" gives the tangent angle. The classification function
+% adds a DetectedClass variable to features.
 
-%HISTORY: 
-%   5 April, 2024: MP. Created.
-%   4 July, 2024: AR. Modified.
-%   14 August, 2024: AR. Modified. Added segmentation.m function that
-%   substitute the previous segmentImage.m.
-%
-%TODO:
-%1) Write programs to "pull" a given set of parameters for an object with a
-%given trackID, and all of the frames for which trackedID exists. 
-%2)try watershed on brightfield images of a single feature. should reveal
-%the four cells in the tetrad 
+% HISTORY:
+%   April 5, 2024: MP. Created.
+%   July 4, 2024: AR. Modified. August 14, 2024: AR. Modified. Added
+%   segmentation.m function to replace segmentImage.m. September 2, 2024:
+%   AR. Modified. Added analyzeCellTracks.m function to analyze shape
+%   changes over time.
 
-%% Input and output info
-imgpath = 'C:\Users\uib\Documents\Alvaro_2324\NN_training\classification\cropped_img\data_2\';
-datapath = [imgpath,'data/'];
-imgextension = 'png'; %make sure you use single quotation marks, e.g. 'tif', and not double, e.g. "tif". String concatenation is different
+% TODO: 1) Write programs to extract a given set of parameters for an
+% object with a specific trackID across all frames where trackedID exists.
+% 2) Try watershed segmentation on brightfield images of a single feature
+% to reveal the four cells in the tetrad.
 
-%% Parameter definition
-%%Segmentation
-invert = 1; %For images taken at x20, set to 0.
+%% Input and Output Information
+imgpath = 'C:\Users\uib\Desktop\zymo_exp_subset\'; % Path to the folder containing images
+datapath = [imgpath, 'data/']; % Path to the folder where feature files will be saved
+imgextension = 'png'; % File extension for images (use single quotation marks)
+
+%% Parameter Definition
+% Segmentation Parameters
+invert = 1; % Set to 0 for images taken at x20 magnification
 paramSegment.int_threshold = 30;
 paramSegment.mode_threshold = 10;
-paramSegment.arearange = [10,inf];
+paramSegment.arearange = [10, inf];
 paramSegment.morph_close_radius = 1;
 
-%%Featuring
+% Featuring Parameters
 paramFeature.minlen = 4;
 paramFeature.maxlen = inf;
 paramFeature.b_init = 1;
 
-%%Tracking
+% Tracking Parameters
 paramTracks.maxdisp = 10;
 paramTracks.mem = 0;
 paramTracks.good = 2;
 paramTracks.dim = 2;
 paramTracks.quiet = 1;
-tracks = [];
+tracks = []; % Initialize an empty array for storing tracks
 
-%Classification
-predict_clas_script = 'C:\Users\uib\Nextcloud2\classification_model\yolov5\classify\predict.py'; % predict_script: path to predict.py script in yolov5 cloned folder.
-weights_class = 'C:\Users\uib\Nextcloud2\classification_model\yolov5\runs\train\definitive\weights\best.pt'; % weights: path to best.pt weight.
-python_path = 'C:\Users\uib\anaconda3\envs\yolov5-env\python.exe';
-yolo_path = 'C:\Users\uib\Nextcloud2\classification_model\yolov5';
-predict_seg_script = 'C:\Users\uib\Nextcloud2\classification_model\yolov5\segment\predict.py';
-weights_seg = 'C:\Users\uib\Nextcloud2\classification_model\yolov5\runs\train-seg\best_seg\weights\best.pt';
+% Classification and Segmentation Paths
+predict_clas_script = 'C:\Users\uib\Nextcloud2\classification_model\yolov5\classify\predict.py'; % Path to predict.py script for classification
+weights_class = 'C:\Users\uib\Nextcloud2\classification_model\yolov5\runs\train\definitive\weights\best.pt'; % Path to weights for classification
+python_path = 'C:\Users\uib\anaconda3\envs\yolov5-env\python.exe'; % Path to Python executable
+yolo_path = 'C:\Users\uib\Nextcloud2\classification_model\yolov5'; % Path to YOLOv5 folder
+predict_seg_script = 'C:\Users\uib\Nextcloud2\classification_model\yolov5\segment\predict.py'; % Path to predict.py script for segmentation
+weights_seg = 'C:\Users\uib\Nextcloud2\classification_model\yolov5\runs\train-seg\best_seg\weights\best.pt'; % Path to weights for segmentation
 
-
-%% Gather list of files and perform analysis
+%% Gather List of Files and Perform Analysis
 if ~isdir(datapath)
-    mkdir(datapath)
+    mkdir(datapath); % Create data folder if it does not exist
 end
-myfiles = dir([imgpath,'*.',imgextension]);
+myfiles = dir([imgpath, '*.', imgextension]); % List all image files in the specified directory
 
-for tt = 1:length(myfiles)
-    
-    if mod(tt-1,10)==0
-        disp(['Extracting features from frame ',num2str(tt),' out of ',num2str(length(myfiles))]);
+for tt = 2:11
+    if mod(tt - 1, 10) == 0
+        disp(['Processing frame ', num2str(tt), ' out of ', num2str(length(myfiles))]);
     end
 
-    %read new image
-    img = imread([imgpath,myfiles(tt).name]);
-    [~,imgname,~] = fileparts(myfiles(tt).name);
+    % Get the image name and corresponding feature file path
+    [~, imgname, ~] = fileparts(myfiles(tt).name);
+    featureFile = fullfile(datapath, [imgname, '_features.mat']);
 
-    
+    % Check if the feature file already exists
+    if isfile(featureFile)
+        disp(['Feature file for frame ', num2str(tt), ' already exists. Skipping feature extraction.']);
+        load(featureFile, 'features'); % Load existing features
+    else
+        % If feature file doesn't exist, process the image
+        img = imread([imgpath, myfiles(tt).name]); % Read the image
 
-    [BWimg, maskedImage] = segmentation(img, python_path, yolo_path, predict_seg_script, weights_seg); %segmentation
-   
-    features = feature_connected_components(BWimg,paramFeature); %featuring
-    %invert if needed
-    if invert
-       img = imcomplement(img);
+        [BWimg, maskedImage] = segmentation_fullsize(img, python_path, yolo_path, predict_seg_script, weights_seg); % Perform segmentation
+
+        features = feature_connected_components(BWimg, paramFeature); % Extract features
+
+        % Invert image if needed
+        if invert
+            img = imcomplement(img);
+        end
+        features = fourier_descs(features, BWimg); % Compute Fourier descriptors
+
+        % Convert cell arrays to numeric arrays if needed
+        for i = 1:length(features)
+            array_outkappa = features(i).outkappa(:);
+            array_outtheta = features(i).outtheta(:);
+            features(i).outkappa = squeeze({array_outkappa'});
+            features(i).outtheta = squeeze({array_outtheta'});
+        end
+
+        imwrite(BWimg, fullfile(datapath, [imgname, '_BW.png'])); % Save the binary image
+        save(featureFile, 'features'); % Save features to .mat file
     end
-    features = classification(img, features, python_path, yolo_path, predict_clas_script, weights_class);
-    tracks = [tracks;[vertcat(features.Centroid),... %assemble array that will be used to track the features
-        vertcat(features.Area),... %repeat this structure in the following line if you want to add an extra column representing a numeric property of the features. This might be useful to have in the array "tracks" later on
-        (1:length(features))',tt*ones(length(features),1)]];
-    save([datapath,imgname,'_features.mat'],'features'); %save features of the objects in the current frame
+
+    % Process and convert feature data
+    for i = 1:length(features)
+        % Check and convert 'outtheta' if it's a cell array
+        if iscell(features(i).outtheta)
+            try
+                features(i).outtheta = cell2mat(cellfun(@(x) x(:), features(i).outtheta, 'UniformOutput', false));
+            catch ME
+                warning('Error converting outtheta for feature %d: %s', i, ME.message);
+            end
+        end
+
+        % Check and convert 'outkappa' if it's a cell array
+        if iscell(features(i).outkappa)
+            try
+                features(i).outkappa = cell2mat(cellfun(@(x) x(:), features(i).outkappa, 'UniformOutput', false));
+            catch ME
+                warning('Error converting outkappa for feature %d: %s', i, ME.message);
+            end
+        end
+
+        % Check and convert 'FourierDescriptors' if it's a cell array
+        if iscell(features(i).FourierDescriptors)
+            try
+                features(i).FourierDescriptors = cell2mat(cellfun(@(x) x(:), features(i).FourierDescriptors, 'UniformOutput', false));
+            catch ME
+                warning('Error converting FourierDescriptors for feature %d: %s', i, ME.message);
+            end
+        end
+
+        % Transpose arrays if needed (if rows are desired instead of
+        % columns)
+        features(i).outkappa = features(i).outkappa';
+        features(i).outtheta = features(i).outtheta';
+        features(i).FourierDescriptors = features(i).FourierDescriptors';
+    end
+
+    % Assemble the 'tracks' array using features data
+    tracks = [tracks; [vertcat(features.Centroid), ... % Centroid positions
+        vertcat(features.Area), ...
+        vertcat(features.outkappa), ...
+        vertcat(features.outtheta), ...
+        vertcat(features.FourierDescriptors), ...
+        (1:length(features))', ...
+        tt * ones(length(features), 1)]];
 end
-disp('Done with the extraction. Moving onto tracking.')
-tracks = track(tracks,paramTracks.maxdisp,paramTracks); %use the track array assembled earlier to track the objects across frames. This appends at the end of "tracks" a column with the trackedID of that specific object
-tracks = tracks(:,[1:size(tracks,2)-3,size(tracks,2)-1,size(tracks,2)-2,size(tracks,2)]); %reorder the columns to get (xpos,ypos,Area,...,frame, naiveID, trackedID)
-save([datapath,'tracks.mat'],'tracks');
+
+disp('Done with feature extraction. Moving on to tracking.');
+tracks = track(tracks, paramTracks.maxdisp, paramTracks); % Track objects across frames
+tracks = tracks(:, [1:size(tracks,2)-3, size(tracks,2)-1, size(tracks,2)-2, size(tracks,2)]); % Reorder columns: (xpos, ypos, Area, ..., frame, naiveID, trackedID)
+analyzeCellTracks(tracks, datapath); % Analyze cell tracks
+save([datapath, 'tracks.mat'], 'tracks'); % Save the tracks array
 disp('Done.')
-
 

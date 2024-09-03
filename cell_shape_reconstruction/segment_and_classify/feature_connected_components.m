@@ -53,14 +53,23 @@ CC = bwconncomp(BWimg);
 features = regionprops(BWimg,"Centroid","Area","Solidity","BoundingBox");
 
 %% for each label, trace the boundary and then run loop shape. add the results to the structure returned from regionprops 
-for nn=1:CC.NumObjects
+for nn = 1:CC.NumObjects
     col = ceil(features(nn).BoundingBox(1));
     row = ceil(features(nn).BoundingBox(2));
     deltacol = features(nn).BoundingBox(3);
     deltarow = features(nn).BoundingBox(4);
-    myborders=trace_boundary(BWimg(row:row+deltarow,col:col+deltacol),param.minlen,param.maxlen,param.b_init);
-    features(nn).pxlborder = [myborders(1).pxls(:,1)+(row-1),myborders(1).pxls(:,2)+(col-1)];
-    [outs,outpos,outtheta,outkappa,pp_pos,pp_theta,pp_kappa]=loop_shape(features(nn).pxlborder);
+    
+    % Ensure the indices are within the image bounds
+    row_end = min(row + deltarow, size(BWimg, 1));  % Ensure row_end does not exceed the number of rows
+    col_end = min(col + deltacol, size(BWimg, 2));  % Ensure col_end does not exceed the number of columns
+    
+    myborders = trace_boundary(BWimg(row:row_end, col:col_end), param.minlen, param.maxlen, param.b_init);
+    
+    % Adjust the border pixel coordinates to account for the full image coordinates
+    features(nn).pxlborder = [myborders(1).pxls(:,1) + (row - 1), myborders(1).pxls(:,2) + (col - 1)];
+    
+    [outs, outpos, outtheta, outkappa, pp_pos, pp_theta, pp_kappa] = loop_shape(features(nn).pxlborder);
+    
     features(nn).outs = outs;
     features(nn).outpos = outpos;
     features(nn).outtheta = outtheta;
@@ -69,6 +78,7 @@ for nn=1:CC.NumObjects
     features(nn).pp_theta = pp_theta;
     features(nn).pp_kappa = pp_kappa;
 end
+
 
 end
 

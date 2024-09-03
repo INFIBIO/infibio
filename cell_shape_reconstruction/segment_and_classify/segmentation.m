@@ -1,7 +1,7 @@
 function [BWimg, maskedImage] = segmentation(img, python_path, yolo_path, predict_seg_script, weights_seg)
 
 % function to apply the segmentation model of yolov5 to segment yeast
-% %accurately.
+% accurately.
 % INPUT:
 % img: raw image. Preference a 640x640 png image of a x63 augmentation.
 % python_path: path to python.exe in yolov5 conda environment.
