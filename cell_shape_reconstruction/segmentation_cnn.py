@@ -1,3 +1,9 @@
+# This script is developed to segment and identify yeast pictures. 
+# The expected input is a folder containing the png images. 
+# The output are BW mask images with each classification as a different grayscale.
+# HISTORY:
+# ---------
+# 08. Sept, 2024. AR: Created.
 import os
 import cv2
 import numpy as np
@@ -325,7 +331,7 @@ def process_images_in_folder(folder_path, predict_seg_script, weights_seg, predi
     # Process all images in the folder
     # PARAMETERS:
     # -----------
-    # folder_path: path to the folder containing subfolders with images
+    # folder_path: path to the folder containing subfolders with png images
     # yolo_path: path to the YOLOv5 directory
     # predict_seg_script: path to the segmentation prediction script
     # weights_seg: path to the weights file for segmentation
