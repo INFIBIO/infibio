@@ -85,7 +85,7 @@ for tt = last_tt:length(myfiles)
     
     % Loop through each bounding box
     imshow(maskedImage);
-    i = 1; % Inicializar i fuera del bucle
+    i = 1; 
     if tt == last_tt
         i = last_i + 1;
     end
