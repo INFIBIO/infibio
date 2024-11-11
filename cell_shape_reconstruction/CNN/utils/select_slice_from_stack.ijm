@@ -1,7 +1,6 @@
 // Script to extract selected slices from a stack in Fiji (ImageJ)
 
 
-
 // Define the range of slices you want to extract
 
 // Iterate through each slice in the specified range
