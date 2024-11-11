@@ -1,76 +1,82 @@
+# script developed to translate from mask to coco format in order to upload the masks in the 
+# correct format to Roboflow.
+# INPUT: folder with the BW png images of the masks.
+# OUTPUT: .json file with the masks in coco format for each image in the input folder
+# HISTORY:
+# --------
+# Created 16 July 24. AR.
 import numpy as np
 import cv2
 from pycocotools import mask
 import json
 import os
 
-# Ruta al archivo de la máscara
+# Path to the mask file
 mask_path = 'C:/Users/uib/Documents/Alvaro_2324/Segmentation/yeaz/images_for_masks/masks_2/'
 
-# Cargar la máscara binaria
+# Load the binary mask
 for file_name in os.listdir(mask_path):
     if file_name.endswith('.png'):
-        # Construir la ruta completa del archivo
+        # Build the full file path
         file_path = os.path.join(mask_path, file_name)
         
-        # Cargar la máscara binaria
+        # Load the binary mask
         mask_image = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
         
-        # Resto del código...
+        # Rest of the code...
         contours, _ = cv2.findContours(mask_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    # Encontrar contornos
-        print( f"Se encontraron {len(contours)} contornos en la máscara")
+        
+        # Find contours
+        print(f"{len(contours)} contours were found in the mask")
 
-        # Inicializar lista de anotaciones
+        # Initialize list of annotations
         annotations = []
 
-        # Iterar sobre los contornos
-        # Iterar sobre los contornos
+        # Iterate over contours
         for contour in contours:
-            # Convertir contorno a una lista de puntos
+            # Convert contour to a list of points
             segmentation = contour.flatten().tolist()
 
-            # Crear máscara binaria para el contorno actual
+            # Create binary mask for the current contour
             mask_binary = np.zeros_like(mask_image)
             cv2.drawContours(mask_binary, [contour], -1, 1, thickness=cv2.FILLED)
 
-            # Obtener el bounding box (caja delimitadora)
+            # Get the bounding box
             x, y, w, h = cv2.boundingRect(contour)
 
-            # Aumentar el tamaño del bounding box en un 20% (ajustar según sea necesario)
-            factor_ancho = 1.2
-            factor_alto = 1.2  # Puedes ajustar este valor también si quieres aumentar la altura
+            # Increase the bounding box size by 20% (adjust as needed)
+            width_factor = 1.2
+            height_factor = 1.2  # You can adjust this value as well if you want to increase the height
 
-            # Calcular el nuevo ancho y alto
-            nuevo_w = int(w * factor_ancho)
-            nuevo_h = int(h * factor_alto)
+            # Calculate the new width and height
+            new_w = int(w * width_factor)
+            new_h = int(h * height_factor)
 
-            # Ajustar la posición para centrar el nuevo bounding box
-            nuevo_x = max(x - (nuevo_w - w) // 2, 0)  # Asegura que no sea negativo
-            nuevo_y = max(y - (nuevo_h - h) // 2, 0)  # Asegura que no sea negativo
+            # Adjust the position to center the new bounding box
+            new_x = max(x - (new_w - w) // 2, 0)  # Ensures it is not negative
+            new_y = max(y - (new_h - h) // 2, 0)  # Ensures it is not negative
 
-            # Convertir la máscara binaria a formato RLE
+            # Convert the binary mask to RLE format
             rle = mask.encode(np.asfortranarray(mask_binary))
 
-            # Calcular el área
+            # Calculate the area
             area = mask.area(rle)
-            print(f"Área: {area}")
+            print(f"Area: {area}")
 
-            # Crear la anotación en formato COCO
+            # Create the annotation in COCO format
             annotation = {
                 "id": len(annotations) + 1,
-                "image_id": int(file_name.split('.')[0]),  # Deberás ajustar esto según tus datos
-                "category_id": 1,  # Ajusta según tu categoría
-                "bbox": [nuevo_x, nuevo_y, nuevo_w, nuevo_h],
+                "image_id": int(file_name.split('.')[0]),  # You should adjust this according to your data
+                "category_id": 1,  # Adjust according to your category
+                "bbox": [new_x, new_y, new_w, new_h],
                 "area": area.tolist(),
                 "segmentation": [segmentation],
                 "iscrowd": 0    
             }
 
-            
             annotations.append(annotation)
 
-        # Crear estructura COCO
+        # Create COCO structure
         coco_format = {
             "info": {
                 "year": "2024",
@@ -89,36 +95,35 @@ for file_name in os.listdir(mask_path):
             ],
             "categories": [
                 {
-            "id": 0,
-            "name": "mask",
-            "supercategory": "none"
+                    "id": 0,
+                    "name": "mask",
+                    "supercategory": "none"
                 },
                 {
-                    "id": 1,  # Ajustar según la categoría
-                    "name": "mask",  # Nombre de la categoría
-                    "supercategory": "mask"  # Nombre de la supercategoría
+                    "id": 1,  # Adjust according to the category
+                    "name": "mask",  # Category name
+                    "supercategory": "mask"  # Supercategory name
                 }
             ],
             "images": [
                 {
-                    "id": int(file_name.split('.')[0]),  # Ajustar según la imagen
+                    "id": int(file_name.split('.')[0]),  # Adjust according to the image
                     "license": 1,
-                    "file_name": '{}.png'.format(str(int(file_name.split('.')[0]))),  # Nombre de la imagen original without extension
+                    "file_name": '{}.png'.format(str(int(file_name.split('.')[0]))),  # Original image name without extension
                     "width": mask_image.shape[1],
                     "height": mask_image.shape[0],
                     "date_captured": "2024-06-25T13:08:10+00:00"
                 }
             ],
             "annotations": annotations
-        
         }
 
-        # Construir la ruta del archivo JSON en la misma carpeta que la máscara
-         # Define the variable "i" as the position of the file_name in the list
+        # Build the JSON file path in the same folder as the mask
         json_path = os.path.join(os.path.dirname(mask_path), '{}_annotations.coco.json'.format(str(int(file_name.split('.')[0]))))
         print(json_path)    
-        # Guardar en archivo JSON
+        
+        # Save to JSON file
         with open(json_path, 'w') as f:
             json.dump(coco_format, f)
 
-        print(f"Archivo JSON guardado en: {json_path}")
+        print(f"JSON file saved at: {json_path}")
