@@ -1,3 +1,4 @@
+// This fiji script crops a 1280x1920 image to 6 640x640 size image to feed a CNN
 // Define the positions of the areas
 regions = newArray("0,0", "640,0", "1280,0","0,576", "640,576", "1280,576");
 // This array defines six starting coordinates (x, y) for cropping regions on the image. 
