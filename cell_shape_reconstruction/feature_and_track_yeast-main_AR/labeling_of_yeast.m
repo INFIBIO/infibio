@@ -13,7 +13,7 @@
 % a Convolutional Neural Network. The script will
 % exit if the user chooses to exit the selection process.
 % INPUT:
-% - imgpath: path with the 640x640 images to be classified
+% - imgpath: path with the images to be classified
 % OUTPUT:
 % - Folder with the classified cropped images.
 % - Folder with the txt files with the class and bounding boxes of the
