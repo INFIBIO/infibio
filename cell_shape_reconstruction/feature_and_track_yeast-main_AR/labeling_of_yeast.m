@@ -15,13 +15,12 @@
 % INPUT:
 % - imgpath: path with the 640x640 images to be classified
 % OUTPUT:
-% - Folder with the classified png 640x640 images.
+% - Folder with the classified cropped images.
 % - Folder with the txt files with the class and bounding boxes of the
 % cells classified. One txt file by image.
 % HISTORY:
 % Created June 2024 from do_features_extraction.m by MP. AR.
-% Modified July 2024. AR. Now it creates as single txt file for each image
-% instead of a single txt file for each cell.
+% Modified July 2024. AR.
 %% Input and output info
 imgpath = 'C:\Users\uib\Nextcloud2\Yeast_experiments\Yeast_experiments\Zymoliase_analyse_trials\Exp_Zymolyase01-005_ConA03-2024110\E1\0\tiff\';
 datapath = [imgpath,'data/'];
@@ -103,7 +102,7 @@ for tt = last_tt:length(myfiles)
         croppedImage = imadjust(croppedImage, stretchlim(croppedImage), []);
         % Save the cropped image to a file
         fileName = fullfile(datapath, sprintf('croppedImage_%d_%d.png', tt, i));
-        % imwrite(croppedImage, fileName);
+        imwrite(croppedImage, fileName);
         % Store the file name
         imageFiles{end+1} = fileName;
         % Display the bounding box
