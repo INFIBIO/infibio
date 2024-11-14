@@ -113,7 +113,9 @@ from ultralytics.utils import DEFAULT_CFG
 
 def run_yolo_classification(classify, weights_clas, img_path):
     """
-    Run classification using the ClassificationPredictor.
+    Run classification using the ClassificationPredictor. Adapted to use YOLOv8. 
+    In case you want to implement YOLOv5, try the previous version of this function
+    of the script (segmentation_cnn.py).
 
     PARAMETERS:
     -----------
