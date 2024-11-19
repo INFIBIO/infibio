@@ -1,4 +1,4 @@
-function plots(df, path_save)
+function plots_ar(df, path_save)
 
     if ~exist('path_save', 'var')
         path_save = '';
@@ -73,10 +73,21 @@ function plots(df, path_save)
         figure;
         hold on;
 
+        % Inicializamos un contador para las leyendas
+        legend_counter = 1;
+        
         for j = 1:length(unique_zym)
-            for c = length(unique_conc)
-            current_zym_data = current_time_data(current_time_data.Zymolyase == unique_zym(j) & current_time_data.Concentration == unique_conc(c), :);
-            histogram(current_zym_data.NormalizedArea, 'DisplayStyle', 'bar', 'EdgeColor', 'none');
+            for c = 1:length(unique_conc)
+                current_zym_data = current_time_data(current_time_data.Zymolyase == unique_zym(j) & current_time_data.Concentration == unique_conc(c), :);
+                
+                % Solo crear el histograma si hay datos correspondientes
+                if ~isempty(current_zym_data)
+                    histogram(current_zym_data.NormalizedArea, 'DisplayStyle', 'bar', 'EdgeColor', 'none');
+                    
+                    % Crear la entrada en la leyenda combinando Zymolyase y Concentration
+                    legend_entries{legend_counter} = ['Zymolyase ' num2str(unique_zym(j)) ', Conc ' num2str(unique_conc(c))];
+                    legend_counter = legend_counter + 1;
+                end
             end
         end
         
@@ -91,10 +102,7 @@ function plots(df, path_save)
         title([sprintf('Particle size distribution (>2) for Time %d and cell density of %d', int2str(unique_times(i)), int2str(unique_conc(c)))]);
         hold off;
         % Create legend
-        legend_entries = cell(length(unique_zym), 1);
-        for j = 1:length(unique_zym)
-            legend_entries{j} = ['Zymolyase ' num2str(unique_zym(j))];
-        end
+       
         legend(legend_entries);
         file_name = sprintf('extreme_plot%d.png', unique_times(i));
         file_path = fullfile(path_save, subfolder, file_name);
@@ -126,9 +134,10 @@ function plots(df, path_save)
         for k = 1:length(unique_zym)
             for v = 1:length(unique_velocity)
                 for t = 1:length(unique_temperature)
+                    for c = 1:length(unique_conc)
                     current_combination_data = current_time_data(current_time_data.Zymolyase == unique_zym(k) & ...
                                                                 current_time_data.Velocity == unique_velocity(v) & ...
-                                                                current_time_data.Temperature == unique_temperature(t), :);
+                                                                current_time_data.Temperature == unique_temperature(t) & current_time_data.Concentration == unique_conc(c), :);
                     unique_areas = unique(current_combination_data.NormalizedArea);
                     total_area = sum(current_combination_data.NormalizedArea);
                     
@@ -138,6 +147,7 @@ function plots(df, path_save)
                         new_row.zymolyase = unique_zym(k);
                         new_row.velocity = unique_velocity(v);
                         new_row.temperature = unique_temperature(t);
+                        new_row.concentration = unique_conc(c);
                         filtered_data = current_combination_data(current_combination_data.NormalizedArea == unique_areas(j), :);
                         sum_area = sum(filtered_data.NormalizedArea);
                         
@@ -151,17 +161,18 @@ function plots(df, path_save)
             end
         end
     end
-
+    end
     % Plot the combined probability
     for k = 1:length(unique_zym)
         for v = 1:length(unique_velocity)
             for t = 1:length(unique_temperature)
+                for c = 1:length(unique_conc)
                 figure;
                 hold on;
                 legend_entries = {}; 
                 current_combination_data = probability(probability.zymolyase == unique_zym(k) & ...
                                                        probability.velocity == unique_velocity(v) & ...
-                                                       probability.temperature == unique_temperature(t), :);
+                                                       probability.temperature == unique_temperature(t) & probability.concentration == unique_conc(c), :);
                 for j = 1:length(unique_times)
                     current_time_data = current_combination_data(current_combination_data.time == unique_times(j), :);
                     errorbar(current_time_data.area, current_time_data.probability, current_time_data.positive_sd);
@@ -183,11 +194,11 @@ function plots(df, path_save)
                 xlabel('Number of Cells');
                 ylabel('Probability');
                 title(['Probability of Each Number of Cells for Time at Zymolyase ', num2str(unique_zym(k)), ...
-                       ' mg/mL, Velocity ', num2str(unique_velocity(v)), ', Temperature ', num2str(unique_temperature(t))]);
+                       ' mg/mL, Velocity ', num2str(unique_velocity(v)), ', Temperature ', num2str(unique_temperature(t)), ', Concentration ', num2str(unique_conc(c))]);
                 
                 % Save the plot to a file
-                file_name = sprintf('plot_probabilities_combined_%d_%d_%d.png', unique_zym(k), unique_velocity(v), unique_temperature(t));
-                file_name2 = sprintf('plot_probabilities_combined_%d_%d_%d.fig', unique_zym(k), unique_velocity(v), unique_temperature(t));
+                file_name = sprintf('plot_probabilities_combined_%d_%d_%d_%d.png', unique_zym(k), unique_velocity(v), unique_temperature(t), unique_conc(c));
+                file_name2 = sprintf('plot_probabilities_combined_%d_%d_%d_%d.fig', unique_zym(k), unique_velocity(v), unique_temperature(t), unique_conc(c));
                 file_path = fullfile(path_save, subfolder, file_name);
                 file_path2 = fullfile(path_save, subfolder, file_name2);
                 saveas(gcf, file_path);

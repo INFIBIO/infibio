@@ -19,9 +19,6 @@ function broken_ascus(data, path_save)
         mkdir(fullfile(path_save, subfolder2));
     end
 
-    % Display the first few rows of the input data for verification
-    disp(head(data));
-
     % Initialize arrays to store results
     results_zymolyase = [];
     results_time = [];
@@ -173,6 +170,13 @@ function broken_ascus(data, path_save)
     uniqueVelocities = unique(broken_ascus_table.Velocity);
     uniqueTemperatures = unique(broken_ascus_table.Temperature);
     
+    % Generate color map and markers
+    numConditions = length(uniqueZymolyase) * length(uniqueVelocities) * length(uniqueTemperatures);
+    colors = lines(numConditions); % Use 'lines' colormap to get distinct colors
+    markers = {'o', 's', 'd', '^', 'v', '>', '<', 'p', 'h', '+', '*', 'x'}; % Different markers
+
+    conditionIndex = 1; % Index to iterate through colors and markers
+
     for z = 1:length(uniqueZymolyase)
         for v = 1:length(uniqueVelocities)
             for temp = 1:length(uniqueTemperatures)
@@ -184,10 +188,16 @@ function broken_ascus(data, path_save)
                                                 broken_ascus_table.Velocity == currentVelocity & ...
                                                 broken_ascus_table.Temperature == currentTemperature, :);
                 
-                plot(dataToPlot.Time, dataToPlot.PercentBrokenAscus, '-o', ...
+                % Assign color and marker based on condition index
+                colorIndex = mod(conditionIndex-1, size(colors, 1)) + 1;
+                markerIndex = mod(conditionIndex-1, length(markers)) + 1;
+                
+                plot(dataToPlot.Time, dataToPlot.PercentBrokenAscus, '-', 'Color', colors(colorIndex, :), ...
+                     'Marker', markers{markerIndex}, 'LineWidth', 1.5, ...
                      'DisplayName', ['Zymolyase ', num2str(currentZymolyase), ...
                                      ', Velocity ', num2str(currentVelocity), ...
                                      ', Temp ', num2str(currentTemperature)]);
+                conditionIndex = conditionIndex + 1; % Increment the index
             end
         end
     end

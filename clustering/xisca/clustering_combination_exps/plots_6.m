@@ -77,12 +77,15 @@ function plots_6(df, path_save)
                     current_color = [0 0 0]; % Default to black for other concentrations
                 end
 
+                % Use mod to cycle through markers if necessary
+                marker_index = mod(i-1, length(markers)) + 1;
+
                 % Plot using semilogarithmic scale for y-axis
                 h = plot(current_time_data.area, log_probability, 'LineStyle', '-', ...
-                    'Marker', markers{i}, 'Color', current_color, ...
+                    'Marker', markers{marker_index}, 'Color', current_color, ...
                     'MarkerFaceColor', current_color);
                 errorbar(current_time_data.area, log_probability, log_positive_sd, 'LineStyle', 'none', ...
-                    'Marker', markers{i}, 'Color', current_color, ...
+                    'Marker', markers{marker_index}, 'Color', current_color, ...
                     'MarkerFaceColor', current_color);
 
                 % Store handle and legend entry
@@ -96,7 +99,7 @@ function plots_6(df, path_save)
     xlabel('Number of Cells in Cluster');
     ylabel('Probability for a Single Cell (Semilog)');
     title('Probability of a Single Cell Being in a Cluster for Different Zymolyase Concentrations and Times');
-    legend(handles, legend_entries, 'Location', 'Best');
+    legend(handles, legend_entries, 'Location', 'Best', 'NumColumns', 2, 'FontSize', 6);
 
     % Save the plot to a file
     file_name = 'log_plot_probabilities_single_cell_all_zymolyase.png';

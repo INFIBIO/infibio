@@ -1,4 +1,4 @@
-function plots(df, path_save)
+function plots_v2(df, path_save)
 
     if ~exist('path_save', 'var')
         path_save = '';
@@ -7,80 +7,52 @@ function plots(df, path_save)
     % df = mat_cleaned;
     clean_data = df(~isnan(df.Time), :);
     unique_times = unique(clean_data.Time);
-    subfolder = 'plots';
+    subfolder = 'plots_2';
     
     if ~exist(fullfile(path_save, subfolder), 'dir')
         mkdir(fullfile(path_save, subfolder));
     end
     
-    % Histogram plots for area distribution
-    for i = 1:length(unique_times)
-        current_time_data = df(df.Time == unique_times(i,:),:);
-        unique_zym = unique(current_time_data.Zymolyase);
-        unique_velocity = unique(current_time_data.Velocity);
-        unique_temperature = unique(current_time_data.Temperature);
-        unique_concentration = unique(current_time_data.Concentration);
-        
-        % Create combination plots
-        params_combinations = {unique_zym, unique_velocity, unique_temperature, unique_concentration};
-        params_names = {'Zymolyase', 'Velocity', 'Temperature', 'Concentration'};
-        
-        for p = 1:length(params_combinations)
-            unique_param = params_combinations{p};
-            param_name = params_names{p};
-            figure;
-            hold on;
-            
-            for j = 1:length(unique_param)
-                current_param_data = current_time_data(current_time_data.(param_name) == unique_param(j),:);
-                histogram(current_param_data.NormalizedArea, 'DisplayStyle', 'bar', 'EdgeColor', 'none');
-            end
-            % Modify x-axis tick labels
-            bin_edges = unique(current_time_data.NormalizedArea);
-            tick_labels = cellfun(@(x) int2str(x), num2cell(bin_edges), 'UniformOutput', false); % Convert bin edges to string
-            tick_labels(cellfun(@(x) str2double(x) == 7, tick_labels)) = {'>6'};        
-            xticks(bin_edges);
-            xticklabels(tick_labels);
-            
-            xlabel('Number of cells per cluster');
-            ylabel('Particle size - normalized Area');
-            title(['Particle size distribution for Time ', int2str(unique_times(i)), ' - ', param_name]);
-            hold off;
-            
-            % Create legend
-            legend_entries = cell(length(unique_param), 1);
-            for j = 1:length(unique_param)
-                legend_entries{j} = [param_name ' ' num2str(unique_param(j))];
-            end
-            legend(legend_entries);
+% Create combinations for parameters and their names
+params_combinations = {'Zymolyase', 'Velocity', 'Temperature'};
+params_names = {'Zymolyase', 'Velocity', 'Temperature'};
 
-            file_name = sprintf('histogram_plot_%s_%d.png', param_name, unique_times(i));
-            file_path = fullfile(path_save, subfolder, file_name);
-            saveas(gcf, file_path);
-            close(gcf);
-        end
-    end
+% Loop through each time point
+for i = 1:length(unique_times)
+    current_time_data = df(df.Time == unique_times(i), :);
+    unique_zym = unique(current_time_data.Zymolyase);
+    unique_velocity = unique(current_time_data.Velocity);
+    unique_temperature = unique(current_time_data.Temperature);
     
-    % Filter out extreme values
+    % Create combination plots for each parameter
+    params_combinations = {unique_zym, unique_velocity, unique_temperature};
+    params_names = {'Zymolyase', 'Velocity', 'Temperature'};
     
-    df_extreme = clean_data(clean_data.NormalizedArea > 2, :);
-    
-    for i = 1:length(unique_times)
-        current_time_data = df_extreme(df_extreme.Time == unique_times(i,:), :);
-        unique_zym = unique(current_time_data.Zymolyase);
-        unique_conc = unique(current_time_data.Concentration);
+    for p = 1:length(params_combinations)
+        unique_param = params_combinations{p};
+        param_name = params_names{p};
         
-        figure;
+        figure;  % Create a new figure for each plot
         hold on;
-
-        for j = 1:length(unique_zym)
-            for c = length(unique_conc)
-            current_zym_data = current_time_data(current_time_data.Zymolyase == unique_zym(j) & current_time_data.Concentration == unique_conc(c), :);
-            histogram(current_zym_data.NormalizedArea, 'DisplayStyle', 'bar', 'EdgeColor', 'none');
-            end
+        
+        % Loop through each unique parameter and plot the histograms
+        for j = 1:length(unique_param)
+            current_param_data = current_time_data(current_time_data.(param_name) == unique_param(j), :);
+            
+            % Remove zero values from the data
+            current_param_data = current_param_data(current_param_data.NormalizedArea > 0, :);
+            
+            % Slight displacement by adding a small random noise to NormalizedArea
+            displacement = 0.05 * j;  % Adjust this value to change displacement
+            data_with_displacement = current_param_data.NormalizedArea + displacement;
+            
+            % Plot histogram with increased transparency and slight displacement
+            histogram(data_with_displacement, 'BinWidth', 0.5, 'DisplayStyle', 'bar', ...
+                'EdgeColor', 'none', 'FaceAlpha', 0.5);  % Increased transparency to 0.5
         end
         
-        bin_edges = unique(current_time_data.NormalizedArea);
+        % Modify x-axis tick labels
+        bin_edges = unique(current_param_data.NormalizedArea);
         tick_labels = cellfun(@(x) int2str(x), num2cell(bin_edges), 'UniformOutput', false); % Convert bin edges to string
         tick_labels(cellfun(@(x) str2double(x) == 7, tick_labels)) = {'>6'};        
         xticks(bin_edges);
@@ -88,31 +60,93 @@ function plots(df, path_save)
         
         xlabel('Number of cells per cluster');
         ylabel('Particle size - normalized Area');
-        title([sprintf('Particle size distribution (>2) for Time %d and cell density of %d', int2str(unique_times(i)), int2str(unique_conc(c)))]);
-        hold off;
+        title(['Time ', int2str(unique_times(i)), ' - ', param_name]);
+        
         % Create legend
-        legend_entries = cell(length(unique_zym), 1);
-        for j = 1:length(unique_zym)
-            legend_entries{j} = ['Zymolyase ' num2str(unique_zym(j))];
+        legend_entries = cell(length(unique_param), 1);
+        for j = 1:length(unique_param)
+            legend_entries{j} = [param_name ' ' num2str(unique_param(j))];
         end
-        legend(legend_entries);
-        file_name = sprintf('extreme_plot%d.png', unique_times(i));
+        legend(legend_entries, 'Location', 'best');
+        
+        hold off;
+        
+        % Save the individual plot to a file
+        file_name = sprintf('histogram_plot_%s_%d.png', param_name, unique_times(i));
         file_path = fullfile(path_save, subfolder, file_name);
         saveas(gcf, file_path);
+        file_name2 = sprintf('histogram_plot_%s_%d.fig', param_name, unique_times(i));
+        file_path2 = fullfile(path_save, subfolder, file_name2);
+        saveas(gcf, file_path2);
         close(gcf);
     end
+end
+
+% Filter out extreme values and create individual plots again
+df_extreme = clean_data(clean_data.NormalizedArea > 2, :);
+
+for i = 1:length(unique_times)
+    current_time_data = df_extreme(df_extreme.Time == unique_times(i), :);
+    unique_zym = unique(current_time_data.Zymolyase);
     
-    % Create violin plot
-    figure;
-    distributionPlot(vertcat(clean_data.NormalizedArea), 'group', [clean_data.Time], 'histOpt', 2);
-    title('Distribution of Areas per Time Violin Plot');
-    xlabel('Time');
-    ylabel('Area');
+    figure;  % Create a new figure for each filtered plot
+    hold on;
+
+    for j = 1:length(unique_zym)
+        current_zym_data = current_time_data(current_time_data.Zymolyase == unique_zym(j), :);
+        
+        % Remove zero values from the data
+        current_zym_data = current_zym_data(current_zym_data.NormalizedArea > 0, :);
+        
+        % Slight displacement by adding a small random noise to NormalizedArea
+        displacement = 0.05 * j;  % Adjust this value to change displacement
+        data_with_displacement = current_zym_data.NormalizedArea + displacement;
+        
+        % Plot histogram with increased transparency and slight displacement
+        histogram(data_with_displacement, 'BinWidth', 0.5, 'DisplayStyle', 'bar', ...
+            'EdgeColor', 'none', 'FaceAlpha', 0.5);  % Increased transparency to 0.5
+    end
     
-    file_name = 'violin_plot.png';
-    file_path = fullfile(path_save, subfolder, file_name);
+    bin_edges = unique(current_time_data.NormalizedArea);
+    tick_labels = cellfun(@(x) int2str(x), num2cell(bin_edges), 'UniformOutput', false); % Convert bin edges to string
+    tick_labels(cellfun(@(x) str2double(x) == 7, tick_labels)) = {'>6'};        
+    xticks(bin_edges);
+    xticklabels(tick_labels);
+    
+    xlabel('Number of cells per cluster');
+    ylabel('Particle size - normalized Area');
+    title(['Particle size distribution (>2) for Time ', int2str(unique_times(i))]);
+    
+    % Create legend
+    legend_entries = cell(length(unique_zym), 1);
+    for j = 1:length(unique_zym)
+        legend_entries{j} = ['Zymolyase ' num2str(unique_zym(j))];
+    end
+    legend(legend_entries, 'Location', 'best');
+    
+    hold off;
+    
+    % Save the individual plot to a file
+    extreme_plot_file_name = sprintf('extreme_plot%d.png', unique_times(i));
+    file_path = fullfile(path_save, subfolder, extreme_plot_file_name);
     saveas(gcf, file_path);
+    extreme_plot_file_name2 = sprintf('extreme_plot%d.fig', unique_times(i));
+    file_path2 = fullfile(path_save, subfolder, extreme_plot_file_name2);
+    saveas(gcf, file_path2);
     close(gcf);
+end
+  
+    % Create violin plot
+    %figure;
+    %distributionPlot(vertcat(clean_data.NormalizedArea), 'group', [clean_data.Time], 'histOpt', 2);
+    %title('Distribution of Areas per Time Violin Plot');
+    %xlabel('Time');
+    %ylabel('Area');
+    
+    %file_name = 'violin_plot.png';
+    %file_path = fullfile(path_save, subfolder, file_name);
+    %saveas(gcf, file_path);
+    %close(gcf);
 
     % Calculate probability and standard deviation
     probability = table(); % Initialize empty table
@@ -183,7 +217,7 @@ function plots(df, path_save)
                 xlabel('Number of Cells');
                 ylabel('Probability');
                 title(['Probability of Each Number of Cells for Time at Zymolyase ', num2str(unique_zym(k)), ...
-                       ' mg/mL, Velocity ', num2str(unique_velocity(v)), ', Temperature ', num2str(unique_temperature(t))]);
+                       ' mg/mL, Velocity ', num2str(unique_velocity(v)), ', Temperature ', num2str(unique_temperature(t))], 'FontSize', 8);
                 
                 % Save the plot to a file
                 file_name = sprintf('plot_probabilities_combined_%d_%d_%d.png', unique_zym(k), unique_velocity(v), unique_temperature(t));

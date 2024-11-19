@@ -17,7 +17,7 @@
 % more than one experiment at time, specify each folder separately.
 
 % Especifica la carpeta madre que contiene todas las subcarpetas
-parentFolder = 'C:\Users\uib\Desktop\Yeast_Experiments\Clustering\Zymoliase\exps\exps';
+parentFolder = 'C:\Users\uib\Desktop\Yeast_Experiments\Clustering\data\increasing_velocity_zymo_18102024\taken_when_sampling';
 
 % Obtén una lista de todas las subcarpetas en la carpeta madre
 subFolders = dir(parentFolder);
@@ -64,29 +64,30 @@ for i = 1:length(subFolders)
     % Define a time mapping table for Velocity 125
     timeMapping_125 = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14; 
                         -5, 0, 20, 40, 60, 80, 100, 120, 140, 180, 220, 260, 300, 340, 380, 420];
-                    
+
     % Define a time mapping table for the rest of the velocities
     timeMapping_other = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14;
                         -5, 0, 30, 60, 90, 120, 180, 240, 300, 360, 420, 480, 540, 600, 660, 720];
-    
+
     % Choose the appropriate time mapping based on Velocity
     if Velocity == 125
         timeMapping = timeMapping_125;
     else
         timeMapping = timeMapping_other;
     end
-    
+
     % Access the time column in the table (assuming the column is named 'Time')
     time = combinedResult.Time;  % Replace 'Time' with the actual name of the time column if different
-    
+
     % Iterate over the mapping table and adjust the time values accordingly
     for j = 1:size(timeMapping, 2)
         time(time == timeMapping(1,j)) = timeMapping(2,j);
     end
-    
+
     % Update the time column in the combined result with the new mapped time values
     combinedResult.Time = time;  % Replace 'Time' with the actual column name
-    
+    % combinedResult.Time = combinedResult.Time*20; % Modify to adapt to your time
+    % units
     % Add the combined data to the final array
     mat_combined = [mat_combined; combinedResult];
 end
@@ -95,13 +96,14 @@ end
 % distinguishes between weird shapes produced in the binarization and good
 % shaped cells to delete weird shaped cell's rows.
 mat_cleaned = clean_weird_shapes(mat_combined);
+mat_cleaned = mat_combined; % to not apply the cleaning.
 writetable(mat_cleaned, fullfile(pathOne, 'mat_cleaned.csv'));
 
 % Plots function will generate the plots specified in the function. 
 % INPUT: mat_combined file, number of bins and the path to save the plots.
 %pathOne = 'C:\Users\xisca\Desktop\Trials_scripts_XF\trial_clustering_v5_CombinationExperiments';
 %mat_cleaned = readtable(fullfile('F:\EXPERIMENTS_CLASSIFIED\Clustering_Cells_Evaluation_Aggregation\COMPARISONS_ALL_EXP\HOMOGENIZER', 'mat_cleaned.csv')); % Check that Velocity is in the file mat_cleaned.csv
-%plots(mat_cleaned, pathOne);
+plots(mat_cleaned, pathOne);
 plots_v2_ar(mat_cleaned, pathOne);
 plots_v3_ar(mat_cleaned, pathOne);
 
@@ -112,23 +114,24 @@ tests(mat_combined, pathOne);
 %%
 % Count the raw single cells in images
 % Call the function with the specified conditions
-countsTable1 = count_single_cells(mat_cleaned, 1, pathOne);
-countsTable2 = count_single_cells(mat_cleaned, 2, pathOne);
-countsTable3 = count_single_cells(mat_cleaned, 3, pathOne);
+% Llamar a la función count_single_cells para cada área única de 1 a 7
+% Crear un cell array para almacenar cada countsTable
+countsTables = cell(1, 7); % Inicializa un cell array de longitud 7
+% Get the full range of possible time points
+allTimes = unique(mat_cleaned.Time);
+for i = 1:7
+    % Generar conteos y guardar en archivo CSV para cada valor de área i
+    countsTables{i} = count_single_cells_ar(mat_cleaned, i, pathOne);
+    
+    % Leer el archivo CSV correspondiente a cada área
+    csvFilePath = fullfile(pathOne, 'results', ['countsTable_', num2str(i), '.csv']);
+    csvTable = readtable(csvFilePath);
+    
+    % Llamar a la función de ploteo con los datos cargados
+    plot_counts_vs_time_v2(csvTable, i, pathOne); % datos ordenados, reduciendo la leyenda (media, desviación...)
+end
 
-% Plot the raw single cells per time and replicate
-csvTable1= readtable(fullfile(pathOne, 'results', 'countsTable_1.csv'));
-%csvTable1= readtable(fullfile('F:\EXPERIMENTS_CLASSIFIED\Clustering_Cells_Evaluation_Aggregation\COMPARISONS_ALL_EXP\HOMOGENIZER\results', 'countsTable_1.csv'));
-csvTable2= readtable(fullfile(pathOne, 'results', 'countsTable_2.csv'));
-%csvTable2= readtable(fullfile('F:\EXPERIMENTS_CLASSIFIED\Clustering_Cells_Evaluation_Aggregation\COMPARISONS_ALL_EXP\HOMOGENIZER\results', 'countsTable_2.csv'));
-csvTable3= readtable(fullfile(pathOne, 'results', 'countsTable_3.csv'));
-%csvTable3= readtable(fullfile('F:\EXPERIMENTS_CLASSIFIED\Clustering_Cells_Evaluation_Aggregation\COMPARISONS_ALL_EXP\HOMOGENIZER\results', 'countsTable_3.csv'));
-%plot_counts_vs_time(csvTable1, 1, pathOne);
-%plot_counts_vs_time(csvTable2, 2, pathOne);
-%plot_counts_vs_time(csvTable3, 3, pathOne);
-plot_counts_vs_time_v2(csvTable1, 1, pathOne); %ordered data. We need to reduce the legend (mean, deviation...)
-plot_counts_vs_time_v2(csvTable2, 2, pathOne); %ordered data. We need to reduce the legend (mean, deviation...)
-plot_counts_vs_time_v2(csvTable3, 3, pathOne); %ordered data. We need to reduce the legend (mean, deviation...)
+
 
 % Plot the probabilities in a smarter way
 plots_x(mat_cleaned, pathOne); % To obtain the plots individually (per experiment), not changed for all experiments (too many data)
@@ -136,8 +139,3 @@ plots_x(mat_cleaned, pathOne); % To obtain the plots individually (per experimen
 % Probability of a Single Cell Being in a Cluster of X cells
 plots_6(mat_cleaned, pathOne); % To obtain the plots individually (per experiment), not changed for all experiments (too many data)
 
-% Calculate the significant parameters to calculate the cells shape
-%mat_cleanedcsv = readtable('C:\Users\xisca\Desktop\Trials_scripts_XF\trial_clustering_v4\mat_cleaned.csv');
-%sig_parameters(mat_cleanedcsv, pathOne);
-% Calculation of broken ascus (approach -> Segmentation AR)
-% broken_ascus(mat_cleaned, pathOne);
