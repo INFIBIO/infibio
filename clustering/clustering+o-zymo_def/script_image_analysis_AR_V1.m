@@ -53,7 +53,7 @@ for k = 1 : length(theFiles)
     fprintf(1, 'Now reading %s\n', fullFileName);
     
     % Apply the first analysis function
-    image_analysis_agg_AR_V5(fullFileName, myFolder);
+    image_analysis_agg_AR_V5(fullFileName, myFolder, 0.15);
 
     % Save the processed image with a '_processed' suffix
     [~, name, ext] = fileparts(baseFileName);
