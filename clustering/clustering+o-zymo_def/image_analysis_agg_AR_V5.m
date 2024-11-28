@@ -1,4 +1,4 @@
-function image_analysis_agg_AR_V5(route, myFolder)
+function image_analysis_agg_AR_V5(route, myFolder, threshold)
 % This function is meant to cropped the original image by a certain
 % reduction Factor, binarize it, connect those cells nearer than a certain
 % threshold and extract the properties of the different regions.
@@ -31,8 +31,8 @@ startPoint = [cropAmount(1) + 1, cropAmount(2) + 1, 1];
 croppedImage = X(startPoint(1):(startPoint(1) + newSize(1) - 1), ...
                  startPoint(2):(startPoint(2) + newSize(2) - 1), :);
 
-X = croppedImage;
-BW = imbinarize(im2gray(X), 'adaptive', 'Sensitivity', 0.20, 'ForegroundPolarity', 'dark');
+X = imadjust(croppedImage);
+BW = imbinarize(im2gray(X), 'adaptive', 'Sensitivity', threshold, 'ForegroundPolarity', 'dark');
 
 % Invert the mask
 BW = imcomplement(BW);
@@ -48,7 +48,7 @@ BW = imfill(BW, 'holes');
 BW = imclearborder(BW);
 
 % Remove small areas (areas smaller than 100 pixels)
-BW_out = bwpropfilt(BW, 'Area', [100 + eps(100), Inf]);
+BW_out = bwpropfilt(BW, 'Area', [400 + eps(400), Inf]);
 
 % Detect edges of the masks using bwboundaries
 [B, L] = bwboundaries(BW_out, 'noholes');
@@ -56,7 +56,6 @@ BW_out = bwpropfilt(BW, 'Area', [100 + eps(100), Inf]);
 % Calculate the distance between the edges of the masks
 minimum_distance = 15;
 
-% Iterate over each pair of regions
 for i = 1:length(B)
     for j = i+1:length(B)
         % Get the borders of the two masks
@@ -89,14 +88,15 @@ for i = 1:length(B)
                 line_mask(line_x(k), line_y(k)) = 1;
             end
             
-            % Dilate the line to obtain a width of 10 pixels
-            line_mask = imdilate(line_mask, strel('disk', 5));
+            % Dilate the line to obtain a width of 4 pixels
+            line_mask = imdilate(line_mask, strel('disk', 2));
             
             % Add the dilated line to the output
             BW_out = BW_out | line_mask;
         end
     end
 end
+
 
 propsbw = regionprops(BW_out, {'Area', 'Centroid', 'Perimeter', 'Circularity', 'Eccentricity', 'Solidity', 'MinorAxisLength', 'MajorAxisLength', 'BoundingBox'});
 
