@@ -351,49 +351,72 @@ def segmentation_fullsize(img_path, predict_seg_script, weights_seg, predict_cla
 
 
 def process_images_in_folder(folder_path, predict_seg_script, weights_seg, predict_clas_script, weights_clas):
-    # Process all images in the folder
-    # PARAMETERS:
-    # -----------
-    # folder_path: path to the folder containing subfolders with images
-    # yolo_path: path to the YOLOv5 directory
-    # predict_seg_script: path to the segmentation prediction script
-    # weights_seg: path to the weights file for segmentation
-    # predict_clas_script: path to the classification prediction script
-    # weights_clas: path to the weights file for classification
-    # RETURNS:
-    # --------
-    # None
-    # HISTORY: 
-    # ---------
-    # 08. Sept, 2024. AR: Created.
+    """
+    Recursively processes all images in the given folder and its subfolders.
 
+    PARAMETERS:
+    -----------
+    folder_path: str
+        Path to the folder containing subfolders with images.
+    predict_seg_script: str
+        Path to the segmentation prediction script.
+    weights_seg: str
+        Path to the weights file for segmentation.
+    predict_clas_script: str
+        Path to the classification prediction script.
+    weights_clas: str
+        Path to the weights file for classification.
 
+    RETURNS:
+    --------
+    None
+
+    HISTORY:
+    --------
+    08. Sept, 2024. AR: Created.
+    26. Nov, 2024. Updated for recursive directory traversal and modularity.
+    """
 
     # Define the image extensions to search for
-    image_extensions = ['*.png', '*.tiff']
-    
-    # Iterate over each subfolder in the folder
-    for folder in os.listdir(folder_path):
-        folder_full_path = os.path.join(folder_path, folder)
-        if os.path.isdir(folder_full_path):  # Check if it's a directory
-            for subfolder in os.listdir(folder_full_path):
-                subfolder_full_path = os.path.join(folder_full_path, subfolder)
-                if os.path.isdir(subfolder_full_path):  # Check if it's a directory
-                    # Get a list of all image files in the subfolder
-                    image_files = []
-                    for ext in image_extensions:
-                        image_files.extend(glob.glob(os.path.join(subfolder_full_path, ext)))
-                    
-                    # Ensure the folder to save results exists
-                    result_folder = os.path.join(subfolder_full_path, 'segmented')
-                    os.makedirs(result_folder, exist_ok=True)
+    image_extensions = ['*.png', '*.tif']
 
-                    # Process each image in the subfolder
-                    for img_path in image_files:
-                        print(f'Processing image: {img_path}')
-                        # Call the segmentation function
-                        segmentation_fullsize(img_path, predict_seg_script, weights_seg, predict_clas_script, weights_clas)
+    def process_subfolder(subfolder_path):
+        """
+        Processes all images in the specified subfolder.
+        Ensures a result folder exists and handles segmentation for each image.
 
+        PARAMETERS:
+        -----------
+        subfolder_path: str
+            Path to the subfolder to process.
+
+        RETURNS:
+        --------
+        None
+        """
+        # Collect all image files in the subfolder
+        image_files = []
+        for ext in image_extensions:
+            image_files.extend(glob.glob(os.path.join(subfolder_path, ext)))
+        
+        if not image_files:
+            print(f"No images found in subfolder: {subfolder_path}")
+            return
+        
+        # Ensure the folder to save results exists
+        result_folder = os.path.join(subfolder_path, 'segmented')
+        os.makedirs(result_folder, exist_ok=True)
+
+        # Process each image in the subfolder
+        for img_path in image_files:
+            print(f'Processing image: {img_path}')
+            # Call the segmentation function
+            segmentation_fullsize(img_path, predict_seg_script, weights_seg, predict_clas_script, weights_clas)
+
+    # Recursively traverse the folder structure
+    for root, dirs, files in os.walk(folder_path):
+        print(f"Entering folder: {root}")
+        process_subfolder(root)
 
 # Main entry point
 if __name__ == '__main__':
